@@ -414,9 +414,41 @@ zfooocus_theme = gr.themes.Base(
 def toggle_inpaint_inputs(mode):
     """Show/hide editor vs image upload based on mask mode."""
     if mode == "🖌️ Manual Paint":
-        return gr.update(visible=True), gr.update(visible=False), gr.update(visible=False)
+        return gr.update(visible=True), gr.update(visible=False), gr.update(visible=False), gr.update(visible=False)
     else:
-        return gr.update(visible=False), gr.update(visible=True), gr.update(visible=True)
+        return gr.update(visible=False), gr.update(visible=True), gr.update(visible=True), gr.update(visible=True)
+
+def edit_mask_manually(image, mask_mode):
+    """Load auto-mask into the manual paint editor as a white layer for refinement."""
+    if image is None:
+        raise gr.Error("Upload an image first!")
+    if not isinstance(image, Image.Image):
+        image = Image.fromarray(image)
+    original = image.convert("RGB")
+    w, h = original.size
+
+    # Generate the auto mask
+    if mask_mode == "🏞️ Background Only":
+        mask_np = auto_mask_background(original)
+    elif mask_mode == "🎭 Everything Except Face":
+        mask_np = auto_mask_except_face(original)
+    else:
+        raise gr.Error("Select an auto mask mode first.")
+
+    # Create RGBA layer: white where mask is, transparent where not
+    layer = np.zeros((h, w, 4), dtype=np.uint8)
+    layer[mask_np > 127] = [255, 255, 255, 200]  # white semi-transparent
+    layer_pil = Image.fromarray(layer)
+
+    editor_value = {"background": original, "layers": [layer_pil], "composite": original}
+    return (
+        editor_value,                    # inp_editor with mask loaded
+        "🖌️ Manual Paint",               # switch mode
+        gr.update(visible=True),          # show editor
+        gr.update(visible=False),         # hide image upload
+        gr.update(visible=False),         # hide mask preview
+        gr.update(visible=False),         # hide edit mask button
+    )
 
 def preview_auto_mask(image, mask_mode):
     """Generate and show auto-mask preview."""
@@ -519,6 +551,8 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="Z-Fooocus") as demo:
                     inp_image = gr.Image(type="pil", label="Upload Photo", height=400, visible=False, sources=["upload"])
                     # Auto-mask preview
                     inp_mask_preview = gr.Image(label="🔴 Mask Preview (red = will be changed)", height=300, visible=False, interactive=False)
+                    # Button to send auto-mask to manual editor for refinement
+                    inp_edit_mask_btn = gr.Button("✏️ Edit This Mask Manually", variant="secondary", visible=False)
 
                     inp_prompt = gr.Textbox(label="What should the masked area become?", lines=2,
                         placeholder="e.g., a tropical beach background")
@@ -544,12 +578,19 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="Z-Fooocus") as demo:
             inp_mask_mode.change(
                 toggle_inpaint_inputs,
                 [inp_mask_mode],
-                [inp_editor, inp_image, inp_mask_preview]
+                [inp_editor, inp_image, inp_mask_preview, inp_edit_mask_btn]
             )
 
             # Auto-generate mask preview when image uploaded in auto mode
             inp_image.change(preview_auto_mask, [inp_image, inp_mask_mode], [inp_mask_preview])
             inp_mask_mode.change(preview_auto_mask, [inp_image, inp_mask_mode], [inp_mask_preview])
+
+            # Edit mask manually: load auto-mask into paint editor
+            inp_edit_mask_btn.click(
+                edit_mask_manually,
+                [inp_image, inp_mask_mode],
+                [inp_editor, inp_mask_mode, inp_editor, inp_image, inp_mask_preview, inp_edit_mask_btn]
+            )
 
             # Track which gallery image is selected
             def on_gallery_select(evt: gr.SelectData):
