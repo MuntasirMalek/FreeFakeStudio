@@ -60,16 +60,14 @@ def pil_to_tensor(img):
 
 # ============================================================
 #  Fooocus-style inpaint helpers
-#  (simplified from Fooocus/modules/inpaint_worker.py)
 # ============================================================
 def compute_crop_region(mask_np, padding=0.15):
     """Find bounding box of mask and add padding (Fooocus-style)."""
     indices = np.where(mask_np > 0)
     if len(indices[0]) == 0 or len(indices[1]) == 0:
-        return None  # no mask painted
+        return None
     a, b = np.min(indices[0]), np.max(indices[0])
     c, d = np.min(indices[1]), np.max(indices[1])
-    # Add padding around the mask (Fooocus uses 1.15x)
     h_center, h_half = (b + a) // 2, (b - a) // 2
     w_center, w_half = (d + c) // 2, (d - c) // 2
     size = int(max(h_half, w_half) * (1.0 + padding))
@@ -104,33 +102,45 @@ def resize_to_multiple(img, multiple=64, max_dim=1024):
     return img.resize((new_w, new_h), Image.LANCZOS)
 
 # ============================================================
-#  Tab 1: Generate (text → image)
+#  Tab 1: Generate — supports multiple images (batch)
 # ============================================================
 @torch.inference_mode()
-def generate_image(prompt, negative, aspect_ratio, seed, steps, cfg, denoise):
+def generate_image(prompt, negative, aspect_ratio, seed, steps, cfg, denoise, num_images):
     seed = make_seed(seed)
     width, height = [int(x) for x in aspect_ratio.split("(")[0].strip().split("x")]
+    num = int(num_images)
 
     pos = CLIPTextEncode.encode(clip, prompt)[0]
     neg = CLIPTextEncode.encode(clip, negative)[0]
-    latent = EmptyLatentImage.generate(width, height, batch_size=1)[0]
-    samples = KSampler_Node.sample(
-        unet, seed, int(steps), float(cfg),
-        "euler", "simple", pos, neg, latent, denoise=float(denoise)
-    )[0]
-    decoded = VAEDecode.decode(vae, samples)[0].detach()
-    path = get_save_path("gen")
-    Image.fromarray(np.array(decoded * 255, dtype=np.uint8)[0]).save(path)
-    return path, path, str(seed)
+
+    images = []
+    paths = []
+    current_seed = seed
+    for i in range(num):
+        latent = EmptyLatentImage.generate(width, height, batch_size=1)[0]
+        samples = KSampler_Node.sample(
+            unet, current_seed, int(steps), float(cfg),
+            "euler", "simple", pos, neg, latent, denoise=float(denoise)
+        )[0]
+        decoded = VAEDecode.decode(vae, samples)[0].detach()
+        path = get_save_path("gen")
+        img = Image.fromarray(np.array(decoded * 255, dtype=np.uint8)[0])
+        img.save(path)
+        images.append(img)
+        paths.append(path)
+        current_seed = current_seed + 1  # increment seed for variety
+
+    return images, paths, str(seed)
 
 # ============================================================
-#  Tab 2: Img2Img (image + prompt → restyled image)
+#  Tab 2: Img2Img — supports multiple images
 # ============================================================
 @torch.inference_mode()
-def img2img(input_image, prompt, negative, seed, steps, cfg, denoise):
+def img2img(input_image, prompt, negative, seed, steps, cfg, denoise, num_images):
     if input_image is None:
         raise gr.Error("Upload an image first!")
     seed = make_seed(seed)
+    num = int(num_images)
 
     input_image = resize_to_multiple(input_image)
     img_tensor = pil_to_tensor(input_image)
@@ -138,17 +148,27 @@ def img2img(input_image, prompt, negative, seed, steps, cfg, denoise):
     pos = CLIPTextEncode.encode(clip, prompt)[0]
     neg = CLIPTextEncode.encode(clip, negative)[0]
     latent = VAEEncode.encode(vae, img_tensor)[0]
-    samples = KSampler_Node.sample(
-        unet, seed, int(steps), float(cfg),
-        "euler", "simple", pos, neg, latent, denoise=float(denoise)
-    )[0]
-    decoded = VAEDecode.decode(vae, samples)[0].detach()
-    path = get_save_path("i2i")
-    Image.fromarray(np.array(decoded * 255, dtype=np.uint8)[0]).save(path)
-    return path, path, str(seed)
+
+    images = []
+    paths = []
+    current_seed = seed
+    for i in range(num):
+        samples = KSampler_Node.sample(
+            unet, current_seed, int(steps), float(cfg),
+            "euler", "simple", pos, neg, latent, denoise=float(denoise)
+        )[0]
+        decoded = VAEDecode.decode(vae, samples)[0].detach()
+        path = get_save_path("i2i")
+        img = Image.fromarray(np.array(decoded * 255, dtype=np.uint8)[0])
+        img.save(path)
+        images.append(img)
+        paths.append(path)
+        current_seed = current_seed + 1
+
+    return images, paths, str(seed)
 
 # ============================================================
-#  Tab 3: Inpaint (Fooocus-style: crop → fill → denoise → composite)
+#  Tab 3: Inpaint (Fooocus-style)
 # ============================================================
 @torch.inference_mode()
 def inpaint(editor_data, prompt, negative, seed, steps, cfg, denoise):
@@ -156,11 +176,9 @@ def inpaint(editor_data, prompt, negative, seed, steps, cfg, denoise):
         raise gr.Error("Upload and paint on an image first!")
     seed = make_seed(seed)
 
-    # --- Extract image and mask from Gradio ImageEditor ---
     if isinstance(editor_data, dict):
         bg = editor_data.get("background")
         layers = editor_data.get("layers", [])
-        composite = editor_data.get("composite")
     else:
         raise gr.Error("Unexpected input format.")
 
@@ -172,7 +190,6 @@ def inpaint(editor_data, prompt, negative, seed, steps, cfg, denoise):
     original = bg.convert("RGB")
     orig_w, orig_h = original.size
 
-    # Build binary mask from painted layers
     mask_combined = np.zeros((orig_h, orig_w), dtype=np.uint8)
     for layer in layers:
         if not isinstance(layer, Image.Image):
@@ -189,39 +206,30 @@ def inpaint(editor_data, prompt, negative, seed, steps, cfg, denoise):
     if np.sum(mask_combined > 0) == 0:
         raise gr.Error("You didn't paint anything! Paint over the area you want to edit.")
 
-    # --- Fooocus-style inpaint pipeline ---
-    # Step 1: Find crop region around mask
     crop = compute_crop_region(mask_combined)
     if crop is None:
         raise gr.Error("No mask detected.")
     a, b, c, d = crop
 
-    # Step 2: Crop to interested area
     cropped_img = np.array(original)[a:b, c:d]
     cropped_mask = mask_combined[a:b, c:d]
 
-    # Step 3: Resize cropped region
     crop_pil = Image.fromarray(cropped_img)
     crop_pil = resize_to_multiple(crop_pil, multiple=64, max_dim=1024)
     cw, ch = crop_pil.size
 
-    # Resize mask to match
     mask_pil = Image.fromarray(cropped_mask).resize((cw, ch), Image.NEAREST)
     mask_resized = np.array(mask_pil)
 
-    # Step 4: Fooocus fill (blur out masked area for clean inpaint)
     filled = fooocus_fill(np.array(crop_pil), mask_resized)
     filled_pil = Image.fromarray(filled)
 
-    # Step 5: VAE encode the filled image
     filled_tensor = pil_to_tensor(filled_pil)
     latent = VAEEncode.encode(vae, filled_tensor)[0]
 
-    # Step 6: Apply mask to latent (only denoise masked region)
     mask_tensor = torch.from_numpy(mask_resized.astype(np.float32) / 255.0).unsqueeze(0)
     latent = SetLatentNoiseMask.set_mask(latent, mask_tensor)[0]
 
-    # Step 7: KSampler — regenerate masked area
     pos = CLIPTextEncode.encode(clip, prompt)[0]
     neg = CLIPTextEncode.encode(clip, negative)[0]
     samples = KSampler_Node.sample(
@@ -229,18 +237,15 @@ def inpaint(editor_data, prompt, negative, seed, steps, cfg, denoise):
         "euler", "simple", pos, neg, latent, denoise=float(denoise)
     )[0]
 
-    # Step 8: VAE decode
     decoded = VAEDecode.decode(vae, samples)[0].detach()
     result_crop = np.array(decoded * 255, dtype=np.uint8)[0]
     result_crop_pil = Image.fromarray(result_crop).resize((d - c, b - a), Image.LANCZOS)
 
-    # Step 9: Composite back onto original (Fooocus-style)
     result = np.array(original).copy()
     result_crop_np = np.array(result_crop_pil)
     mask_composite = Image.fromarray(cropped_mask).resize((d - c, b - a), Image.LANCZOS)
     mask_float = np.array(mask_composite).astype(np.float32)[:, :, None] / 255.0
 
-    # Feather the edges for smooth blending
     mask_blur = Image.fromarray((mask_float[:, :, 0] * 255).astype(np.uint8))
     mask_blur = mask_blur.filter(ImageFilter.GaussianBlur(3))
     mask_float = np.array(mask_blur).astype(np.float32)[:, :, None] / 255.0
@@ -252,11 +257,11 @@ def inpaint(editor_data, prompt, negative, seed, steps, cfg, denoise):
 
     path = get_save_path("inpaint")
     Image.fromarray(result).save(path)
-    return path, path, str(seed)
+    return [Image.fromarray(result)], [path], str(seed)
 
 
 # ============================================================
-#  UI — Fooocus-Style
+#  UI — Z-Fooocus Green Theme
 # ============================================================
 
 ASPECTS = [
@@ -268,25 +273,72 @@ ASPECTS = [
 DEFAULT_NEG = "low quality, blurry, pixelated, noise, watermark, text, logo"
 
 CSS = """
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
 .gradio-container {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
     max-width: 1400px !important;
 }
 .main-title {
     text-align: center;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #00c853 0%, #00e676 40%, #69f0ae 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     font-size: 2.8em;
     font-weight: 800;
     margin: 10px 0 0 0;
+    letter-spacing: -0.02em;
 }
 .subtitle {
-    text-align: center; color: #888; margin-bottom: 15px; font-size: 1.05em;
+    text-align: center; color: #81c995; margin-bottom: 15px; font-size: 1.05em;
+}
+
+/* Green accent overrides */
+button.primary {
+    background: linear-gradient(135deg, #00c853, #00e676) !important;
+    border: none !important;
+    color: white !important;
+    font-weight: 600 !important;
+}
+button.primary:hover {
+    background: linear-gradient(135deg, #00b848, #00d46a) !important;
+    box-shadow: 0 4px 15px rgba(0, 200, 83, 0.35) !important;
+}
+
+/* Smooth inpaint canvas */
+.image-editor canvas {
+    cursor: crosshair !important;
+    image-rendering: auto !important;
+    touch-action: none !important;
+}
+
+/* Gallery styling */
+.gallery-item {
+    border-radius: 8px !important;
+    overflow: hidden !important;
+}
+
+/* Fullscreen button for images */
+.fullscreen-btn {
+    position: absolute; top: 8px; right: 8px; z-index: 10;
+    background: rgba(0,0,0,0.5); color: white; border: none;
+    border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 14px;
+}
+
+/* Tabs styling */
+.tab-nav button.selected {
+    border-bottom-color: #00c853 !important;
+    color: #00c853 !important;
 }
 """
 
-with gr.Blocks(theme=gr.themes.Soft(), css=CSS, title="Z-Fooocus") as demo:
+# Green-tinted Gradio theme
+zfooocus_theme = gr.themes.Soft(
+    primary_hue=gr.themes.colors.green,
+    secondary_hue=gr.themes.colors.emerald,
+    neutral_hue=gr.themes.colors.gray,
+)
+
+with gr.Blocks(theme=zfooocus_theme, css=CSS, title="Z-Fooocus") as demo:
 
     gr.HTML("""
     <div>
@@ -309,19 +361,26 @@ with gr.Blocks(theme=gr.themes.Soft(), css=CSS, title="Z-Fooocus") as demo:
                     with gr.Row():
                         gen_aspect = gr.Dropdown(ASPECTS, value="1024x1024 (1:1)", label="📐 Aspect Ratio")
                         gen_seed = gr.Number(value=0, label="🎲 Seed (0=random)", precision=0)
+                    with gr.Row():
+                        gen_num = gr.Slider(1, 4, value=2, step=1, label="🖼️ Number of Images")
                     gen_btn = gr.Button("🚀 Generate", variant="primary", size="lg")
                     with gr.Accordion("⚙️ Advanced", open=False):
-                        gen_steps = gr.Slider(4, 25, value=9, step=1, label="Steps")
+                        gen_steps = gr.Slider(4, 25, value=10, step=1, label="Steps")
                         gen_cfg = gr.Slider(0.5, 4.0, value=1.0, step=0.1, label="CFG")
                         gen_denoise = gr.Slider(0.1, 1.0, value=1.0, step=0.05, label="Denoise")
                         gen_neg = gr.Textbox(DEFAULT_NEG, label="Negative Prompt", lines=2)
                 with gr.Column(scale=1):
-                    gen_out = gr.Image(label="Result", height=512)
-                    gen_dl = gr.File(label="📥 Download")
+                    gen_gallery = gr.Gallery(label="Results", columns=2, height=520,
+                                             object_fit="contain", show_download_button=True,
+                                             show_fullscreen_button=True)
+                    gen_dl = gr.File(label="📥 Download All", file_count="multiple")
                     gen_seed_out = gr.Textbox(label="Seed Used", interactive=False, show_copy_button=True)
-            gen_btn.click(generate_image,
-                [gen_prompt, gen_neg, gen_aspect, gen_seed, gen_steps, gen_cfg, gen_denoise],
-                [gen_dl, gen_out, gen_seed_out])
+
+            # Clear gallery before generating to avoid flash glitch
+            gen_btn.click(lambda: ([], None, ""), outputs=[gen_gallery, gen_dl, gen_seed_out]).then(
+                generate_image,
+                [gen_prompt, gen_neg, gen_aspect, gen_seed, gen_steps, gen_cfg, gen_denoise, gen_num],
+                [gen_gallery, gen_dl, gen_seed_out])
 
         # ─── IMG2IMG ──────────────────────────────────────────
         with gr.Tab("✏️ Img2Img"):
@@ -331,20 +390,27 @@ with gr.Blocks(theme=gr.themes.Soft(), css=CSS, title="Z-Fooocus") as demo:
                     i2i_img = gr.Image(type="pil", label="📸 Upload Photo", height=400)
                     i2i_prompt = gr.Textbox(label="✨ Prompt", lines=2,
                         placeholder="e.g., oil painting style, vibrant colors")
+                    with gr.Row():
+                        i2i_num = gr.Slider(1, 4, value=2, step=1, label="🖼️ Number of Images")
                     i2i_btn = gr.Button("✨ Transform", variant="primary", size="lg")
                     with gr.Accordion("⚙️ Advanced", open=False):
-                        i2i_steps = gr.Slider(4, 25, value=9, step=1, label="Steps")
+                        i2i_steps = gr.Slider(4, 25, value=10, step=1, label="Steps")
                         i2i_cfg = gr.Slider(0.5, 4.0, value=1.0, step=0.1, label="CFG")
                         i2i_denoise = gr.Slider(0.1, 1.0, value=0.65, step=0.05, label="Denoise (lower = more original)")
                         i2i_seed = gr.Number(value=0, label="🎲 Seed (0=random)", precision=0)
                         i2i_neg = gr.Textbox(DEFAULT_NEG, label="Negative Prompt", lines=2)
+                    i2i_clear = gr.ClearButton([i2i_img], value="🗑️ Clear Image")
                 with gr.Column(scale=1):
-                    i2i_out = gr.Image(label="Result", height=512)
-                    i2i_dl = gr.File(label="📥 Download")
+                    i2i_gallery = gr.Gallery(label="Results", columns=2, height=520,
+                                              object_fit="contain", show_download_button=True,
+                                              show_fullscreen_button=True)
+                    i2i_dl = gr.File(label="📥 Download All", file_count="multiple")
                     i2i_seed_out = gr.Textbox(label="Seed Used", interactive=False, show_copy_button=True)
-            i2i_btn.click(img2img,
-                [i2i_img, i2i_prompt, i2i_neg, i2i_seed, i2i_steps, i2i_cfg, i2i_denoise],
-                [i2i_dl, i2i_out, i2i_seed_out])
+
+            i2i_btn.click(lambda: ([], None, ""), outputs=[i2i_gallery, i2i_dl, i2i_seed_out]).then(
+                img2img,
+                [i2i_img, i2i_prompt, i2i_neg, i2i_seed, i2i_steps, i2i_cfg, i2i_denoise, i2i_num],
+                [i2i_gallery, i2i_dl, i2i_seed_out])
 
         # ─── INPAINT ─────────────────────────────────────────
         with gr.Tab("🎨 Inpaint"):
@@ -353,33 +419,42 @@ with gr.Blocks(theme=gr.themes.Soft(), css=CSS, title="Z-Fooocus") as demo:
                 with gr.Column(scale=1):
                     inp_editor = gr.ImageEditor(
                         label="🖌️ Upload & Paint",
-                        type="pil", height=450,
-                        brush=gr.Brush(colors=["#ffffff"], default_size=30),
-                        eraser=gr.Eraser(default_size=20),
+                        type="pil", height=500,
+                        brush=gr.Brush(
+                            colors=["#ffffff"],
+                            default_size=40,
+                        ),
+                        eraser=gr.Eraser(default_size=30),
+                        transforms=["crop"],
                     )
                     inp_prompt = gr.Textbox(label="✨ What should the painted area become?", lines=2,
                         placeholder="e.g., a blue sky with clouds")
                     inp_btn = gr.Button("🎨 Inpaint", variant="primary", size="lg")
                     with gr.Accordion("⚙️ Advanced", open=False):
-                        inp_steps = gr.Slider(4, 25, value=12, step=1, label="Steps")
+                        inp_steps = gr.Slider(4, 25, value=10, step=1, label="Steps")
                         inp_cfg = gr.Slider(0.5, 4.0, value=1.0, step=0.1, label="CFG")
                         inp_denoise = gr.Slider(0.1, 1.0, value=0.80, step=0.05, label="Denoise")
                         inp_seed = gr.Number(value=0, label="🎲 Seed (0=random)", precision=0)
                         inp_neg = gr.Textbox(DEFAULT_NEG, label="Negative Prompt", lines=2)
+                    inp_clear = gr.ClearButton([inp_editor], value="🗑️ Clear Canvas")
                 with gr.Column(scale=1):
-                    inp_out = gr.Image(label="Result", height=512)
-                    inp_dl = gr.File(label="📥 Download")
+                    inp_gallery = gr.Gallery(label="Result", columns=1, height=520,
+                                              object_fit="contain", show_download_button=True,
+                                              show_fullscreen_button=True)
+                    inp_dl = gr.File(label="📥 Download", file_count="multiple")
                     inp_seed_out = gr.Textbox(label="Seed Used", interactive=False, show_copy_button=True)
-            inp_btn.click(inpaint,
+
+            inp_btn.click(lambda: ([], None, ""), outputs=[inp_gallery, inp_dl, inp_seed_out]).then(
+                inpaint,
                 [inp_editor, inp_prompt, inp_neg, inp_seed, inp_steps, inp_cfg, inp_denoise],
-                [inp_dl, inp_out, inp_seed_out])
+                [inp_gallery, inp_dl, inp_seed_out])
 
     gr.Markdown("""
     ---
-    <p style="text-align:center; color:#999; font-size:0.85em;">
-    ⚡ Z-Fooocus · <a href="https://github.com/Tongyi-MAI/Z-Image">Z-Image</a>
-    · Inpaint inspired by <a href="https://github.com/lllyasviel/Fooocus">Fooocus</a>
-    · Based on <a href="https://github.com/NeuralFalconYT/Z-Image-Colab">NeuralFalconYT</a>
+    <p style="text-align:center; color:#81c995; font-size:0.85em;">
+    ⚡ Z-Fooocus · <a href="https://github.com/Tongyi-MAI/Z-Image" style="color:#00c853">Z-Image</a>
+    · Inpaint inspired by <a href="https://github.com/lllyasviel/Fooocus" style="color:#00c853">Fooocus</a>
+    · Based on <a href="https://github.com/NeuralFalconYT/Z-Image-Colab" style="color:#00c853">NeuralFalconYT</a>
     </p>
     """)
 
