@@ -171,11 +171,11 @@ def generate_auto_mask(image_pil, mask_mode):
     else:
         return None
 
-    # Create red overlay preview
+    # Create white overlay preview (same as manual paint)
     img_np = np.array(image_pil.convert("RGB"))
     overlay = img_np.copy()
     mask_bool = mask_np > 127
-    overlay[mask_bool] = (overlay[mask_bool] * 0.4 + np.array([255, 50, 50]) * 0.6).astype(np.uint8)
+    overlay[mask_bool] = (overlay[mask_bool] * 0.3 + np.array([255, 255, 255]) * 0.7).astype(np.uint8)
     return Image.fromarray(overlay)
 
 
@@ -455,15 +455,11 @@ def edit_mask_manually(image, mask_mode):
     # Store auto-mask + original in state
     auto_mask_data = {"mask": mask_np, "original": original}
 
-    # Create a visual overlay on the image showing the mask
-    # Darken masked areas so user can see what will be changed
+    # Create a visual overlay showing the mask in white (like manual paint)
     img_np = np.array(original).copy()
     mask_bool = mask_np > 127
-    # Tint masked areas slightly red so user knows what's masked
     overlay = img_np.astype(np.float32)
-    overlay[mask_bool, 0] = np.clip(overlay[mask_bool, 0] * 0.5 + 180, 0, 255)  # red
-    overlay[mask_bool, 1] = overlay[mask_bool, 1] * 0.4  # dim green
-    overlay[mask_bool, 2] = overlay[mask_bool, 2] * 0.4  # dim blue
+    overlay[mask_bool] = overlay[mask_bool] * 0.3 + np.array([255, 255, 255]) * 0.7
     overlay_pil = Image.fromarray(overlay.astype(np.uint8))
 
     editor_value = {"background": overlay_pil, "layers": [], "composite": overlay_pil}
