@@ -282,7 +282,7 @@ def inpaint(editor_data, inp_image, prompt, negative, seed, cfg, denoise, num_im
         has_manual_paint = np.sum(manual_mask > 0) > 0
 
         if has_manual_paint:
-            # User painted their own mask — use it
+            # User painted on top of auto-mask — COMBINE both masks
             # Use the stored original image if available (editor bg might have overlay)
             if auto_mask_data and auto_mask_data.get("original") is not None:
                 orig_data = auto_mask_data["original"]
@@ -295,9 +295,19 @@ def inpaint(editor_data, inp_image, prompt, negative, seed, cfg, denoise, num_im
                     original = orig_data.convert("RGB")
                 else:
                     original = bg.convert("RGB")
+                # Combine: auto-mask + manual paint (OR operation)
+                stored_mask = auto_mask_data.get("mask")
+                if stored_mask is not None:
+                    stored_mask = np.array(stored_mask, dtype=np.uint8)
+                    if stored_mask.shape[:2] != manual_mask.shape[:2]:
+                        stored_mask = np.array(Image.fromarray(stored_mask).resize(
+                            (manual_mask.shape[1], manual_mask.shape[0]), Image.NEAREST))
+                    mask_combined = np.maximum(stored_mask, manual_mask)
+                else:
+                    mask_combined = manual_mask
             else:
                 original = bg.convert("RGB")
-            mask_combined = manual_mask
+                mask_combined = manual_mask
         elif auto_mask_data and auto_mask_data.get("mask") is not None:
             # User didn't paint but there's a stored auto-mask — use it
             orig_data = auto_mask_data["original"]
