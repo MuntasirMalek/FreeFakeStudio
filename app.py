@@ -247,7 +247,7 @@ def img2img(input_image, prompt, negative, seed, cfg, denoise, num_images):
 #  Tab 3: Inpaint — supports manual paint + auto-mask modes
 # ============================================================
 @torch.inference_mode()
-def inpaint(editor_data, inp_image, prompt, negative, seed, cfg, denoise, num_images, mask_mode):
+def inpaint(editor_data, inp_image, prompt, negative, seed, cfg, denoise, num_images, mask_mode, auto_mask_data):
     seed = make_seed(seed)
     num = int(num_images)
 
@@ -266,27 +266,44 @@ def inpaint(editor_data, inp_image, prompt, negative, seed, cfg, denoise, num_im
         if not isinstance(bg, Image.Image):
             bg = Image.fromarray(bg)
 
-        original = bg.convert("RGB")
-        orig_w, orig_h = original.size
-
-        mask_combined = np.zeros((orig_h, orig_w), dtype=np.uint8)
+        # Check if user actually painted anything
+        manual_mask = np.zeros((bg.size[1], bg.size[0]), dtype=np.uint8)
         for layer in layers:
             if not isinstance(layer, Image.Image):
                 layer = Image.fromarray(layer)
-            layer = layer.resize((orig_w, orig_h))
+            layer = layer.resize(bg.size)
             arr = np.array(layer)
             if arr.ndim == 3 and arr.shape[2] == 4:
-                mask_combined = np.maximum(mask_combined, arr[:, :, 3])
+                manual_mask = np.maximum(manual_mask, arr[:, :, 3])
             elif arr.ndim == 3:
-                mask_combined = np.maximum(mask_combined, np.mean(arr[:, :, :3], axis=2).astype(np.uint8))
+                manual_mask = np.maximum(manual_mask, np.mean(arr[:, :, :3], axis=2).astype(np.uint8))
             elif arr.ndim == 2:
-                mask_combined = np.maximum(mask_combined, arr)
+                manual_mask = np.maximum(manual_mask, arr)
 
-        if np.sum(mask_combined > 0) == 0:
-            raise gr.Error("You didn't paint anything! Paint over the area you want to edit.")
+        has_manual_paint = np.sum(manual_mask > 0) > 0
+
+        if has_manual_paint:
+            # User painted their own mask — use it
+            # Use the stored original image if available (editor bg might have overlay)
+            if auto_mask_data and auto_mask_data.get("original") is not None:
+                original = auto_mask_data["original"]
+            else:
+                original = bg.convert("RGB")
+            mask_combined = manual_mask
+        elif auto_mask_data and auto_mask_data.get("mask") is not None:
+            # User didn't paint but there's a stored auto-mask — use it
+            original = auto_mask_data["original"]
+            mask_combined = auto_mask_data["mask"]
+            # Resize to match if needed
+            if mask_combined.shape[:2] != (original.size[1], original.size[0]):
+                mask_combined = np.array(Image.fromarray(mask_combined).resize(original.size, Image.NEAREST))
+        else:
+            raise gr.Error("Paint the areas you want to change, or use auto-mask first!")
+
+        orig_w, orig_h = original.size
 
     else:
-        # Auto-mask mode
+        # Auto-mask mode (direct, no editing)
         if inp_image is None:
             raise gr.Error("Upload an image first!")
         if not isinstance(inp_image, Image.Image):
@@ -419,23 +436,45 @@ def toggle_inpaint_inputs(mode):
         return gr.update(visible=False), gr.update(visible=True), gr.update(visible=True), gr.update(visible=True)
 
 def edit_mask_manually(image, mask_mode):
-    """Load image into the manual paint editor for mask refinement."""
+    """Store auto-mask and load image with overlay into editor for refinement."""
     if image is None:
         raise gr.Error("Upload an image first!")
     if not isinstance(image, Image.Image):
         image = Image.fromarray(image)
     original = image.convert("RGB")
+    w, h = original.size
 
-    # Just load the image as background — user paints mask manually
-    # They already saw the red preview so they know where to paint
-    editor_value = {"background": original, "layers": [], "composite": original}
+    # Generate the auto mask
+    if mask_mode == "🏞️ Background Only":
+        mask_np = auto_mask_background(original)
+    elif mask_mode == "🎭 Everything Except Face":
+        mask_np = auto_mask_except_face(original)
+    else:
+        raise gr.Error("Select an auto mask mode first.")
+
+    # Store auto-mask + original in state
+    auto_mask_data = {"mask": mask_np, "original": original}
+
+    # Create a visual overlay on the image showing the mask
+    # Darken masked areas so user can see what will be changed
+    img_np = np.array(original).copy()
+    mask_bool = mask_np > 127
+    # Tint masked areas slightly red so user knows what's masked
+    overlay = img_np.astype(np.float32)
+    overlay[mask_bool, 0] = np.clip(overlay[mask_bool, 0] * 0.5 + 180, 0, 255)  # red
+    overlay[mask_bool, 1] = overlay[mask_bool, 1] * 0.4  # dim green
+    overlay[mask_bool, 2] = overlay[mask_bool, 2] * 0.4  # dim blue
+    overlay_pil = Image.fromarray(overlay.astype(np.uint8))
+
+    editor_value = {"background": overlay_pil, "layers": [], "composite": overlay_pil}
     return (
-        editor_value,                    # inp_editor
+        editor_value,                    # inp_editor (with overlay)
         "🖌️ Manual Paint",               # switch mode
         gr.update(visible=True),          # show editor
         gr.update(visible=False),         # hide image upload
         gr.update(visible=False),         # hide mask preview
         gr.update(visible=False),         # hide edit mask button
+        auto_mask_data,                   # store in State
     )
 
 def preview_auto_mask(image, mask_mode):
@@ -561,6 +600,8 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="Z-Fooocus") as demo:
                     inp_seed_out = gr.Textbox(label="Seed Used", interactive=False, show_copy_button=True)
                     # Hidden state to store selected image index
                     inp_selected_idx = gr.State(value=0)
+                    # Hidden state to store auto-mask data
+                    inp_auto_mask_state = gr.State(value=None)
 
             # Toggle visibility based on mask mode
             inp_mask_mode.change(
@@ -573,11 +614,11 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="Z-Fooocus") as demo:
             inp_image.change(preview_auto_mask, [inp_image, inp_mask_mode], [inp_mask_preview])
             inp_mask_mode.change(preview_auto_mask, [inp_image, inp_mask_mode], [inp_mask_preview])
 
-            # Edit mask manually: load auto-mask into paint editor
+            # Edit mask manually: store auto-mask in State, load overlay into editor
             inp_edit_mask_btn.click(
                 edit_mask_manually,
                 [inp_image, inp_mask_mode],
-                [inp_editor, inp_mask_mode, inp_editor, inp_image, inp_mask_preview, inp_edit_mask_btn]
+                [inp_editor, inp_mask_mode, inp_editor, inp_image, inp_mask_preview, inp_edit_mask_btn, inp_auto_mask_state]
             )
 
             # Track which gallery image is selected
@@ -617,7 +658,7 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="Z-Fooocus") as demo:
             # Inpaint button
             inp_btn.click(lambda: ([], None, ""), outputs=[inp_gallery, inp_dl, inp_seed_out]).then(
                 inpaint,
-                [inp_editor, inp_image, inp_prompt, inp_neg, inp_seed, inp_cfg, inp_denoise, inp_num, inp_mask_mode],
+                [inp_editor, inp_image, inp_prompt, inp_neg, inp_seed, inp_cfg, inp_denoise, inp_num, inp_mask_mode, inp_auto_mask_state],
                 [inp_gallery, inp_dl, inp_seed_out])
 
     gr.Markdown("""
