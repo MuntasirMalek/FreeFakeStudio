@@ -172,11 +172,10 @@ def generate_auto_mask(image_pil, mask_mode):
         return None
 
     # Create white overlay preview (same as manual paint)
-    img_np = np.array(image_pil.convert("RGB"))
-    overlay = img_np.copy()
+    img_np = np.array(image_pil.convert("RGB")).copy()
     mask_bool = mask_np > 127
-    overlay[mask_bool] = (overlay[mask_bool] * 0.3 + np.array([255, 255, 255]) * 0.7).astype(np.uint8)
-    return Image.fromarray(overlay)
+    img_np[mask_bool] = [255, 255, 255]  # solid white, same as manual paint brush
+    return Image.fromarray(img_np)
 
 
 # ============================================================
@@ -286,14 +285,35 @@ def inpaint(editor_data, inp_image, prompt, negative, seed, cfg, denoise, num_im
             # User painted their own mask — use it
             # Use the stored original image if available (editor bg might have overlay)
             if auto_mask_data and auto_mask_data.get("original") is not None:
-                original = auto_mask_data["original"]
+                orig_data = auto_mask_data["original"]
+                # Handle gr.State deserialization — could be PIL, numpy, or path
+                if isinstance(orig_data, str):
+                    original = Image.open(orig_data).convert("RGB")
+                elif isinstance(orig_data, np.ndarray):
+                    original = Image.fromarray(orig_data).convert("RGB")
+                elif isinstance(orig_data, Image.Image):
+                    original = orig_data.convert("RGB")
+                else:
+                    original = bg.convert("RGB")
             else:
                 original = bg.convert("RGB")
             mask_combined = manual_mask
         elif auto_mask_data and auto_mask_data.get("mask") is not None:
             # User didn't paint but there's a stored auto-mask — use it
-            original = auto_mask_data["original"]
-            mask_combined = auto_mask_data["mask"]
+            orig_data = auto_mask_data["original"]
+            if isinstance(orig_data, str):
+                original = Image.open(orig_data).convert("RGB")
+            elif isinstance(orig_data, np.ndarray):
+                original = Image.fromarray(orig_data).convert("RGB")
+            elif isinstance(orig_data, Image.Image):
+                original = orig_data.convert("RGB")
+            else:
+                raise gr.Error("Could not load original image from auto-mask data.")
+            mask_data = auto_mask_data["mask"]
+            if isinstance(mask_data, list):
+                mask_combined = np.array(mask_data, dtype=np.uint8)
+            else:
+                mask_combined = np.array(mask_data, dtype=np.uint8)
             # Resize to match if needed
             if mask_combined.shape[:2] != (original.size[1], original.size[0]):
                 mask_combined = np.array(Image.fromarray(mask_combined).resize(original.size, Image.NEAREST))
@@ -455,12 +475,11 @@ def edit_mask_manually(image, mask_mode):
     # Store auto-mask + original in state
     auto_mask_data = {"mask": mask_np, "original": original}
 
-    # Create a visual overlay showing the mask in white (like manual paint)
+    # Create a visual overlay showing the mask in solid white (like manual paint)
     img_np = np.array(original).copy()
     mask_bool = mask_np > 127
-    overlay = img_np.astype(np.float32)
-    overlay[mask_bool] = overlay[mask_bool] * 0.3 + np.array([255, 255, 255]) * 0.7
-    overlay_pil = Image.fromarray(overlay.astype(np.uint8))
+    img_np[mask_bool] = [255, 255, 255]  # solid white
+    overlay_pil = Image.fromarray(img_np)
 
     editor_value = {"background": overlay_pil, "layers": [], "composite": overlay_pil}
     return (
@@ -573,7 +592,7 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="Z-Fooocus") as demo:
                     # Auto-mask image upload (hidden by default)
                     inp_image = gr.Image(type="pil", label="Upload Photo", height=400, visible=False, sources=["upload"])
                     # Auto-mask preview
-                    inp_mask_preview = gr.Image(label="🔴 Mask Preview (red = will be changed)", height=300, visible=False, interactive=False)
+                    inp_mask_preview = gr.Image(label="Mask Preview (white = will be changed)", height=300, visible=False, interactive=False)
                     # Button to send auto-mask to manual editor for refinement
                     inp_edit_mask_btn = gr.Button("✏️ Edit This Mask Manually", variant="secondary", visible=False)
 
