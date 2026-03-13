@@ -419,30 +419,18 @@ def toggle_inpaint_inputs(mode):
         return gr.update(visible=False), gr.update(visible=True), gr.update(visible=True), gr.update(visible=True)
 
 def edit_mask_manually(image, mask_mode):
-    """Load auto-mask into the manual paint editor as a white layer for refinement."""
+    """Load image into the manual paint editor for mask refinement."""
     if image is None:
         raise gr.Error("Upload an image first!")
     if not isinstance(image, Image.Image):
         image = Image.fromarray(image)
     original = image.convert("RGB")
-    w, h = original.size
 
-    # Generate the auto mask
-    if mask_mode == "🏞️ Background Only":
-        mask_np = auto_mask_background(original)
-    elif mask_mode == "🎭 Everything Except Face":
-        mask_np = auto_mask_except_face(original)
-    else:
-        raise gr.Error("Select an auto mask mode first.")
-
-    # Create RGBA layer: white where mask is, transparent where not
-    layer = np.zeros((h, w, 4), dtype=np.uint8)
-    layer[mask_np > 127] = [255, 255, 255, 200]  # white semi-transparent
-    layer_pil = Image.fromarray(layer)
-
-    editor_value = {"background": original, "layers": [layer_pil], "composite": original}
+    # Just load the image as background — user paints mask manually
+    # They already saw the red preview so they know where to paint
+    editor_value = {"background": original, "layers": [], "composite": original}
     return (
-        editor_value,                    # inp_editor with mask loaded
+        editor_value,                    # inp_editor
         "🖌️ Manual Paint",               # switch mode
         gr.update(visible=True),          # show editor
         gr.update(visible=False),         # hide image upload
