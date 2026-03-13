@@ -61,7 +61,7 @@ def pil_to_tensor(img):
 # ============================================================
 #  Fooocus-style inpaint helpers
 # ============================================================
-def compute_crop_region(mask_np, padding=0.15):
+def compute_crop_region(mask_np, padding=0.30):
     indices = np.where(mask_np > 0)
     if len(indices[0]) == 0 or len(indices[1]) == 0:
         return None
@@ -97,6 +97,13 @@ def resize_to_multiple(img, multiple=64, max_dim=1024):
     new_w = max(multiple, new_w)
     new_h = max(multiple, new_h)
     return img.resize((new_w, new_h), Image.LANCZOS)
+
+def enhance_inpaint_prompt(prompt):
+    """Like Fooocus — auto-add quality boosters to inpaint prompts."""
+    boosters = "photorealistic, high quality, detailed, natural lighting, 8K"
+    if any(b in prompt.lower() for b in ["realistic", "quality", "detailed", "8k", "4k"]):
+        return prompt  # user already added quality terms
+    return f"{prompt}, {boosters}"
 
 # ============================================================
 #  Auto-mask helpers (rembg + OpenCV face detection)
@@ -318,7 +325,8 @@ def inpaint(editor_data, inp_image, prompt, negative, seed, cfg, denoise, num_im
 
     mask_tensor = torch.from_numpy(mask_resized.astype(np.float32) / 255.0).unsqueeze(0)
 
-    pos = CLIPTextEncode.encode(clip, prompt)[0]
+    prompt_enhanced = enhance_inpaint_prompt(prompt)
+    pos = CLIPTextEncode.encode(clip, prompt_enhanced)[0]
     neg = CLIPTextEncode.encode(clip, negative)[0]
 
     images, paths = [], []
@@ -518,7 +526,7 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="Z-Fooocus") as demo:
                     inp_btn = gr.Button("🎨 Inpaint", variant="primary", size="lg")
                     with gr.Accordion("⚙️ Advanced", open=False):
                         inp_cfg = gr.Slider(0.5, 4.0, value=1.0, step=0.1, label="CFG")
-                        inp_denoise = gr.Slider(0.1, 1.0, value=0.80, step=0.05, label="Denoise")
+                        inp_denoise = gr.Slider(0.1, 1.0, value=0.60, step=0.05, label="Denoise (lower = more realistic)")
                         inp_seed = gr.Number(value=0, label="Seed (0 = random)", precision=0)
                         inp_neg = gr.Textbox(DEFAULT_NEG, label="Negative Prompt", lines=2)
                     inp_clear = gr.ClearButton([inp_editor, inp_image, inp_mask_preview], value="🗑️ Clear All")
