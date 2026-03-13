@@ -462,7 +462,7 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="Z-Fooocus") as demo:
             gr.Markdown("Upload a photo and describe how to restyle it. Lower denoise = more faithful to original.")
             with gr.Row():
                 with gr.Column(scale=1):
-                    i2i_img = gr.Image(type="pil", label="Upload Photo", height=400)
+                    i2i_img = gr.Image(type="pil", label="Upload Photo", height=400, sources=["upload"])
                     i2i_prompt = gr.Textbox(label="Prompt", lines=2,
                         placeholder="e.g., oil painting style, vibrant colors")
                     i2i_num = gr.Slider(1, 16, value=2, step=1, label="Number of Images")
@@ -508,7 +508,7 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="Z-Fooocus") as demo:
                     )
 
                     # Auto-mask image upload (hidden by default)
-                    inp_image = gr.Image(type="pil", label="Upload Photo", height=400, visible=False)
+                    inp_image = gr.Image(type="pil", label="Upload Photo", height=400, visible=False, sources=["upload"])
                     # Auto-mask preview
                     inp_mask_preview = gr.Image(label="🔴 Mask Preview (red = will be changed)", height=300, visible=False, interactive=False)
 
