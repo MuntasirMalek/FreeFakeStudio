@@ -526,8 +526,11 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="Z-Fooocus") as demo:
                     inp_gallery = gr.Gallery(label="Results", columns=2, height=520,
                                               object_fit="contain", show_download_button=True,
                                               show_fullscreen_button=True)
+                    inp_send_btn = gr.Button("🖌️ Send to Paint Editor for Touch-up", variant="secondary")
                     inp_dl = gr.File(label="Download All", file_count="multiple")
                     inp_seed_out = gr.Textbox(label="Seed Used", interactive=False, show_copy_button=True)
+                    # Hidden state to store selected image index
+                    inp_selected_idx = gr.State(value=0)
 
             # Toggle visibility based on mask mode
             inp_mask_mode.change(
@@ -539,6 +542,40 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="Z-Fooocus") as demo:
             # Auto-generate mask preview when image uploaded in auto mode
             inp_image.change(preview_auto_mask, [inp_image, inp_mask_mode], [inp_mask_preview])
             inp_mask_mode.change(preview_auto_mask, [inp_image, inp_mask_mode], [inp_mask_preview])
+
+            # Track which gallery image is selected
+            def on_gallery_select(evt: gr.SelectData):
+                return evt.index
+
+            inp_gallery.select(on_gallery_select, outputs=[inp_selected_idx])
+
+            # Send selected result to paint editor for manual refinement
+            def send_to_editor(gallery_images, selected_idx):
+                if not gallery_images or len(gallery_images) == 0:
+                    raise gr.Error("No results to send! Run inpaint first.")
+                idx = int(selected_idx) if selected_idx is not None else 0
+                idx = min(idx, len(gallery_images) - 1)
+                img_data = gallery_images[idx]
+                # Gallery items can be tuples (image, caption) or just images
+                if isinstance(img_data, tuple):
+                    img_data = img_data[0]
+                if isinstance(img_data, str):
+                    img_data = Image.open(img_data)
+                # Return: editor with image as background, switch to manual mode, hide auto inputs
+                editor_value = {"background": img_data, "layers": [], "composite": img_data}
+                return (
+                    editor_value,                    # inp_editor
+                    "🖌️ Manual Paint",               # inp_mask_mode
+                    gr.update(visible=True),          # inp_editor visible
+                    gr.update(visible=False),         # inp_image hidden
+                    gr.update(visible=False),         # inp_mask_preview hidden
+                )
+
+            inp_send_btn.click(
+                send_to_editor,
+                [inp_gallery, inp_selected_idx],
+                [inp_editor, inp_mask_mode, inp_editor, inp_image, inp_mask_preview]
+            )
 
             # Inpaint button
             inp_btn.click(lambda: ([], None, ""), outputs=[inp_gallery, inp_dl, inp_seed_out]).then(
