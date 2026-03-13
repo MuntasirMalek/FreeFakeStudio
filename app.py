@@ -10,6 +10,7 @@ import numpy as np
 from PIL import Image, ImageFilter
 import re, uuid
 import gradio as gr
+import cv2
 
 sys.path.insert(0, "/content/ComfyUI")
 from nodes import NODE_CLASS_MAPPINGS
@@ -55,7 +56,6 @@ def make_seed(seed):
     return int(seed)
 
 def pil_to_tensor(img):
-    """PIL Image → ComfyUI tensor (B, H, W, C) float32 0-1"""
     return torch.from_numpy(np.array(img.convert("RGB")).astype(np.float32) / 255.0).unsqueeze(0)
 
 # ============================================================
@@ -99,6 +99,80 @@ def resize_to_multiple(img, multiple=64, max_dim=1024):
     return img.resize((new_w, new_h), Image.LANCZOS)
 
 # ============================================================
+#  Auto-mask helpers (rembg + OpenCV face detection)
+# ============================================================
+_rembg_session = None
+def get_rembg_session():
+    global _rembg_session
+    if _rembg_session is None:
+        from rembg import new_session
+        _rembg_session = new_session("u2net")
+    return _rembg_session
+
+def auto_mask_background(image_pil):
+    """Returns mask where background=255 (white), person=0 (black)."""
+    from rembg import remove
+    session = get_rembg_session()
+    # rembg returns RGBA where alpha=person
+    result = remove(image_pil, session=session, only_mask=True)
+    mask_np = np.array(result)  # person=255, bg=0
+    bg_mask = 255 - mask_np     # invert: bg=255, person=0
+    return bg_mask
+
+def auto_mask_except_face(image_pil):
+    """Returns mask where everything=255 EXCEPT face region=0."""
+    from rembg import remove
+    img_np = np.array(image_pil.convert("RGB"))
+
+    # Detect faces with OpenCV
+    gray = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
+    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+    faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(50, 50))
+
+    h, w = img_np.shape[:2]
+    mask = np.ones((h, w), dtype=np.uint8) * 255  # start with everything masked
+
+    if len(faces) > 0:
+        for (fx, fy, fw, fh) in faces:
+            # Add padding around face (30% extra)
+            pad_w = int(fw * 0.3)
+            pad_h = int(fh * 0.3)
+            x1 = max(0, fx - pad_w)
+            y1 = max(0, fy - pad_h)
+            x2 = min(w, fx + fw + pad_w)
+            y2 = min(h, fy + fh + pad_h)
+            # Create elliptical mask for natural face shape
+            center_x = (x1 + x2) // 2
+            center_y = (y1 + y2) // 2
+            axes_x = (x2 - x1) // 2
+            axes_y = (y2 - y1) // 2
+            cv2.ellipse(mask, (center_x, center_y), (axes_x, axes_y), 0, 0, 360, 0, -1)
+    else:
+        # Fallback: if no face found, just mask background
+        mask = auto_mask_background(image_pil)
+
+    return mask
+
+def generate_auto_mask(image_pil, mask_mode):
+    """Generate auto mask and return as a preview image."""
+    if image_pil is None:
+        return None
+    if mask_mode == "🏞️ Background Only":
+        mask_np = auto_mask_background(image_pil)
+    elif mask_mode == "🎭 Everything Except Face":
+        mask_np = auto_mask_except_face(image_pil)
+    else:
+        return None
+
+    # Create red overlay preview
+    img_np = np.array(image_pil.convert("RGB"))
+    overlay = img_np.copy()
+    mask_bool = mask_np > 127
+    overlay[mask_bool] = (overlay[mask_bool] * 0.4 + np.array([255, 50, 50]) * 0.6).astype(np.uint8)
+    return Image.fromarray(overlay)
+
+
+# ============================================================
 #  Tab 1: Generate
 # ============================================================
 @torch.inference_mode()
@@ -110,8 +184,7 @@ def generate_image(prompt, negative, aspect_ratio, seed, cfg, denoise, num_image
     pos = CLIPTextEncode.encode(clip, prompt)[0]
     neg = CLIPTextEncode.encode(clip, negative)[0]
 
-    images = []
-    paths = []
+    images, paths = [], []
     current_seed = seed
     for i in range(num):
         latent = EmptyLatentImage.generate(width, height, batch_size=1)[0]
@@ -146,8 +219,7 @@ def img2img(input_image, prompt, negative, seed, cfg, denoise, num_images):
     neg = CLIPTextEncode.encode(clip, negative)[0]
     latent = VAEEncode.encode(vae, img_tensor)[0]
 
-    images = []
-    paths = []
+    images, paths = [], []
     current_seed = seed
     for i in range(num):
         samples = KSampler_Node.sample(
@@ -165,45 +237,64 @@ def img2img(input_image, prompt, negative, seed, cfg, denoise, num_images):
     return images, paths, str(seed)
 
 # ============================================================
-#  Tab 3: Inpaint
+#  Tab 3: Inpaint — supports manual paint + auto-mask modes
 # ============================================================
 @torch.inference_mode()
-def inpaint(editor_data, prompt, negative, seed, cfg, denoise, brush_size, num_images):
-    if editor_data is None:
-        raise gr.Error("Upload and paint on an image first!")
+def inpaint(editor_data, inp_image, prompt, negative, seed, cfg, denoise, num_images, mask_mode):
     seed = make_seed(seed)
     num = int(num_images)
 
-    if isinstance(editor_data, dict):
-        bg = editor_data.get("background")
-        layers = editor_data.get("layers", [])
+    # --- Determine image and mask based on mode ---
+    if mask_mode == "🖌️ Manual Paint":
+        if editor_data is None:
+            raise gr.Error("Upload and paint on an image first!")
+        if isinstance(editor_data, dict):
+            bg = editor_data.get("background")
+            layers = editor_data.get("layers", [])
+        else:
+            raise gr.Error("Unexpected input format.")
+
+        if bg is None:
+            raise gr.Error("No background image found.")
+        if not isinstance(bg, Image.Image):
+            bg = Image.fromarray(bg)
+
+        original = bg.convert("RGB")
+        orig_w, orig_h = original.size
+
+        mask_combined = np.zeros((orig_h, orig_w), dtype=np.uint8)
+        for layer in layers:
+            if not isinstance(layer, Image.Image):
+                layer = Image.fromarray(layer)
+            layer = layer.resize((orig_w, orig_h))
+            arr = np.array(layer)
+            if arr.ndim == 3 and arr.shape[2] == 4:
+                mask_combined = np.maximum(mask_combined, arr[:, :, 3])
+            elif arr.ndim == 3:
+                mask_combined = np.maximum(mask_combined, np.mean(arr[:, :, :3], axis=2).astype(np.uint8))
+            elif arr.ndim == 2:
+                mask_combined = np.maximum(mask_combined, arr)
+
+        if np.sum(mask_combined > 0) == 0:
+            raise gr.Error("You didn't paint anything! Paint over the area you want to edit.")
+
     else:
-        raise gr.Error("Unexpected input format.")
+        # Auto-mask mode
+        if inp_image is None:
+            raise gr.Error("Upload an image first!")
+        if not isinstance(inp_image, Image.Image):
+            inp_image = Image.fromarray(inp_image)
+        original = inp_image.convert("RGB")
+        orig_w, orig_h = original.size
 
-    if bg is None:
-        raise gr.Error("No background image found.")
-    if not isinstance(bg, Image.Image):
-        bg = Image.fromarray(bg)
+        if mask_mode == "🏞️ Background Only":
+            mask_combined = auto_mask_background(original)
+        elif mask_mode == "🎭 Everything Except Face":
+            mask_combined = auto_mask_except_face(original)
+        else:
+            raise gr.Error("Unknown mask mode.")
 
-    original = bg.convert("RGB")
-    orig_w, orig_h = original.size
-
-    mask_combined = np.zeros((orig_h, orig_w), dtype=np.uint8)
-    for layer in layers:
-        if not isinstance(layer, Image.Image):
-            layer = Image.fromarray(layer)
-        layer = layer.resize((orig_w, orig_h))
-        arr = np.array(layer)
-        if arr.ndim == 3 and arr.shape[2] == 4:
-            mask_combined = np.maximum(mask_combined, arr[:, :, 3])
-        elif arr.ndim == 3:
-            mask_combined = np.maximum(mask_combined, np.mean(arr[:, :, :3], axis=2).astype(np.uint8))
-        elif arr.ndim == 2:
-            mask_combined = np.maximum(mask_combined, arr)
-
-    if np.sum(mask_combined > 0) == 0:
-        raise gr.Error("You didn't paint anything! Paint over the area you want to edit.")
-
+    # --- Fooocus-style inpaint pipeline ---
     crop = compute_crop_region(mask_combined)
     if crop is None:
         raise gr.Error("No mask detected.")
@@ -230,8 +321,7 @@ def inpaint(editor_data, prompt, negative, seed, cfg, denoise, brush_size, num_i
     pos = CLIPTextEncode.encode(clip, prompt)[0]
     neg = CLIPTextEncode.encode(clip, negative)[0]
 
-    images = []
-    paths = []
+    images, paths = [], []
     current_seed = seed
     for i in range(num):
         latent = SetLatentNoiseMask.set_mask(latent_base, mask_tensor)[0]
@@ -286,23 +376,24 @@ CSS = """
     max-width: 1400px !important;
 }
 .main-title {
-    text-align: center;
-    color: #e0e0e0;
-    font-size: 2.8em;
-    font-weight: 800;
-    margin: 10px 0 0 0;
-    letter-spacing: -0.02em;
+    text-align: center; font-size: 2.8em; font-weight: 800;
+    margin: 10px 0 0 0; letter-spacing: -0.02em;
 }
 .main-title span {
     background: linear-gradient(135deg, #60a5fa, #a78bfa);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
 }
 .subtitle {
     text-align: center; color: #9ca3af; margin-bottom: 15px; font-size: 1.05em;
 }
 .footer-link { color: #60a5fa !important; text-decoration: none; }
 .footer-link:hover { text-decoration: underline; }
+
+/* Hide the move/pan tool from ImageEditor toolbar */
+.image-editor .toolbar button[aria-label="Move"],
+.image-editor .toolbar button:has(svg path[d*="M13"]):last-of-type {
+    display: none !important;
+}
 """
 
 zfooocus_theme = gr.themes.Base(
@@ -311,6 +402,19 @@ zfooocus_theme = gr.themes.Base(
     neutral_hue=gr.themes.colors.slate,
     font=gr.themes.GoogleFont("Inter"),
 )
+
+def toggle_inpaint_inputs(mode):
+    """Show/hide editor vs image upload based on mask mode."""
+    if mode == "🖌️ Manual Paint":
+        return gr.update(visible=True), gr.update(visible=False), gr.update(visible=False)
+    else:
+        return gr.update(visible=False), gr.update(visible=True), gr.update(visible=True)
+
+def preview_auto_mask(image, mask_mode):
+    """Generate and show auto-mask preview."""
+    if image is None or mask_mode == "🖌️ Manual Paint":
+        return None
+    return generate_auto_mask(image, mask_mode)
 
 with gr.Blocks(theme=zfooocus_theme, css=CSS, title="Z-Fooocus") as demo:
 
@@ -335,8 +439,7 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="Z-Fooocus") as demo:
                     with gr.Row():
                         gen_aspect = gr.Dropdown(ASPECTS, value="1024x1024 (1:1)", label="Aspect Ratio")
                         gen_seed = gr.Number(value=0, label="Seed (0 = random)", precision=0)
-                    with gr.Row():
-                        gen_num = gr.Slider(1, 4, value=2, step=1, label="Number of Images")
+                    gen_num = gr.Slider(1, 16, value=2, step=1, label="Number of Images")
                     gen_btn = gr.Button("🚀 Generate", variant="primary", size="lg")
                     with gr.Accordion("⚙️ Advanced", open=False):
                         gen_cfg = gr.Slider(0.5, 4.0, value=1.0, step=0.1, label="CFG")
@@ -362,8 +465,7 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="Z-Fooocus") as demo:
                     i2i_img = gr.Image(type="pil", label="Upload Photo", height=400)
                     i2i_prompt = gr.Textbox(label="Prompt", lines=2,
                         placeholder="e.g., oil painting style, vibrant colors")
-                    with gr.Row():
-                        i2i_num = gr.Slider(1, 4, value=2, step=1, label="Number of Images")
+                    i2i_num = gr.Slider(1, 16, value=2, step=1, label="Number of Images")
                     i2i_btn = gr.Button("✨ Transform", variant="primary", size="lg")
                     with gr.Accordion("⚙️ Advanced", open=False):
                         i2i_cfg = gr.Slider(0.5, 4.0, value=1.0, step=0.1, label="CFG")
@@ -385,33 +487,41 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="Z-Fooocus") as demo:
 
         # ─── INPAINT ─────────────────────────────────────────
         with gr.Tab("🎨 Inpaint"):
-            gr.Markdown("Upload a photo, **paint over the area** you want to change, then describe what should replace it.")
             with gr.Row():
                 with gr.Column(scale=1):
+                    # Mask mode selector
+                    inp_mask_mode = gr.Radio(
+                        choices=["🖌️ Manual Paint", "🏞️ Background Only", "🎭 Everything Except Face"],
+                        value="🖌️ Manual Paint",
+                        label="Mask Mode",
+                    )
+
+                    # Manual paint editor (shown by default)
                     inp_editor = gr.ImageEditor(
                         label="Upload & Paint Mask",
-                        type="pil", height=500,
-                        brush=gr.Brush(
-                            colors=["#ffffff"],
-                            default_size=40,
-                        ),
+                        type="pil", height=450,
+                        brush=gr.Brush(colors=["#ffffff"], default_size=40),
                         eraser=gr.Eraser(default_size=30),
                         sources=["upload"],
                         transforms=[],
+                        visible=True,
                     )
-                    # Manual brush size slider
-                    inp_brush_size = gr.Slider(5, 100, value=40, step=5, label="🖌️ Brush / Eraser Size")
-                    inp_prompt = gr.Textbox(label="What should the painted area become?", lines=2,
-                        placeholder="e.g., a blue sky with clouds")
-                    with gr.Row():
-                        inp_num = gr.Slider(1, 4, value=2, step=1, label="Number of Images")
+
+                    # Auto-mask image upload (hidden by default)
+                    inp_image = gr.Image(type="pil", label="Upload Photo", height=400, visible=False)
+                    # Auto-mask preview
+                    inp_mask_preview = gr.Image(label="🔴 Mask Preview (red = will be changed)", height=300, visible=False, interactive=False)
+
+                    inp_prompt = gr.Textbox(label="What should the masked area become?", lines=2,
+                        placeholder="e.g., a tropical beach background")
+                    inp_num = gr.Slider(1, 16, value=2, step=1, label="Number of Images")
                     inp_btn = gr.Button("🎨 Inpaint", variant="primary", size="lg")
                     with gr.Accordion("⚙️ Advanced", open=False):
                         inp_cfg = gr.Slider(0.5, 4.0, value=1.0, step=0.1, label="CFG")
                         inp_denoise = gr.Slider(0.1, 1.0, value=0.80, step=0.05, label="Denoise")
                         inp_seed = gr.Number(value=0, label="Seed (0 = random)", precision=0)
                         inp_neg = gr.Textbox(DEFAULT_NEG, label="Negative Prompt", lines=2)
-                    inp_clear = gr.ClearButton([inp_editor], value="🗑️ Clear Canvas")
+                    inp_clear = gr.ClearButton([inp_editor, inp_image, inp_mask_preview], value="🗑️ Clear All")
                 with gr.Column(scale=1):
                     inp_gallery = gr.Gallery(label="Results", columns=2, height=520,
                                               object_fit="contain", show_download_button=True,
@@ -419,9 +529,21 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="Z-Fooocus") as demo:
                     inp_dl = gr.File(label="Download All", file_count="multiple")
                     inp_seed_out = gr.Textbox(label="Seed Used", interactive=False, show_copy_button=True)
 
+            # Toggle visibility based on mask mode
+            inp_mask_mode.change(
+                toggle_inpaint_inputs,
+                [inp_mask_mode],
+                [inp_editor, inp_image, inp_mask_preview]
+            )
+
+            # Auto-generate mask preview when image uploaded in auto mode
+            inp_image.change(preview_auto_mask, [inp_image, inp_mask_mode], [inp_mask_preview])
+            inp_mask_mode.change(preview_auto_mask, [inp_image, inp_mask_mode], [inp_mask_preview])
+
+            # Inpaint button
             inp_btn.click(lambda: ([], None, ""), outputs=[inp_gallery, inp_dl, inp_seed_out]).then(
                 inpaint,
-                [inp_editor, inp_prompt, inp_neg, inp_seed, inp_cfg, inp_denoise, inp_brush_size, inp_num],
+                [inp_editor, inp_image, inp_prompt, inp_neg, inp_seed, inp_cfg, inp_denoise, inp_num, inp_mask_mode],
                 [inp_gallery, inp_dl, inp_seed_out])
 
     gr.Markdown("""
