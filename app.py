@@ -423,7 +423,6 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="CheapFakeStudio") as demo:
         # IMG2IMG
         # ═══════════════════════════════════════════════════
         with gr.Tab("✏️ Img2Img"):
-            gr.Markdown("Upload a photo and describe the edit. Use **Qwen-Image-Edit** for instruction-based editing (best quality).")
             with gr.Row():
                 with gr.Column(scale=1):
                     i2i_model = gr.Dropdown(MODEL_EDIT, value=MODEL_EDIT[0],
@@ -439,7 +438,7 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="CheapFakeStudio") as demo:
                         i2i_denoise = gr.Slider(0.1, 1.0, value=0.65, step=0.05, label="Denoise")
                         i2i_seed = gr.Number(value=0, label="Seed (0 = random)", precision=0)
                         i2i_neg = gr.Textbox(DEFAULT_NEG, label="Negative Prompt", lines=2)
-                    i2i_clear = gr.ClearButton([i2i_img], value="🗑️ Clear")
+
                 with gr.Column(scale=1):
                     i2i_gallery = gr.Gallery(label="Results", columns=2, height=520,
                                               object_fit="contain", show_download_button=True,
