@@ -18,19 +18,37 @@ def _get_nodes():
     global _nodes
     if not _nodes:
         import sys
-        sys.path.insert(0, "/content/ComfyUI")
+        if "/content/ComfyUI" not in sys.path:
+            sys.path.insert(0, "/content/ComfyUI")
         from nodes import NODE_CLASS_MAPPINGS
+
+        # Import ComfyUI-GGUF nodes specifically
+        try:
+            import importlib
+            gguf_module = importlib.import_module("custom_nodes.ComfyUI-GGUF.nodes")
+            gguf_mappings = gguf_module.NODE_CLASS_MAPPINGS if hasattr(gguf_module, 'NODE_CLASS_MAPPINGS') else {}
+        except Exception:
+            try:
+                from custom_nodes import ComfyUI_GGUF
+                gguf_mappings = ComfyUI_GGUF.NODE_CLASS_MAPPINGS
+            except Exception:
+                gguf_mappings = {}
+
+        all_nodes = {**NODE_CLASS_MAPPINGS, **gguf_mappings}
+
         _nodes = {
-            "UNETLoader":       NODE_CLASS_MAPPINGS["UNETLoader"](),
-            "CLIPLoader":       NODE_CLASS_MAPPINGS["CLIPLoader"](),
-            "VAELoader":        NODE_CLASS_MAPPINGS["VAELoader"](),
-            "CLIPTextEncode":   NODE_CLASS_MAPPINGS["CLIPTextEncode"](),
-            "KSampler":         NODE_CLASS_MAPPINGS["KSampler"](),
-            "VAEDecode":        NODE_CLASS_MAPPINGS["VAEDecode"](),
-            "VAEEncode":        NODE_CLASS_MAPPINGS["VAEEncode"](),
-            "EmptyLatentImage": NODE_CLASS_MAPPINGS["EmptyLatentImage"](),
-            "SetLatentNoiseMask": NODE_CLASS_MAPPINGS["SetLatentNoiseMask"](),
+            "UNETLoader":       all_nodes["UNETLoader"](),
+            "CLIPLoader":       all_nodes["CLIPLoader"](),
+            "VAELoader":        all_nodes["VAELoader"](),
+            "CLIPTextEncode":   all_nodes["CLIPTextEncode"](),
+            "KSampler":         all_nodes["KSampler"](),
+            "VAEDecode":        all_nodes["VAEDecode"](),
+            "VAEEncode":        all_nodes["VAEEncode"](),
+            "EmptyLatentImage": all_nodes["EmptyLatentImage"](),
+            "SetLatentNoiseMask": all_nodes["SetLatentNoiseMask"](),
         }
+        if "CLIPLoaderGGUF" in all_nodes:
+            _nodes["CLIPLoaderGGUF"] = all_nodes["CLIPLoaderGGUF"]()
     return _nodes
 
 # ── Load / Unload ──────────────────────────────────────────
@@ -49,7 +67,7 @@ def load():
         
         # Load GGUF CLIP (Single Qwen3 8B, no T5 needed for klein)
         _clip = n["CLIPLoaderGGUF"].load_clip(
-            clip_name="Qwen3-8B-Q2_K.gguf",
+            clip_name="Qwen3-8B-Q3_K_M.gguf",
             type="flux2"
         )[0]
         
