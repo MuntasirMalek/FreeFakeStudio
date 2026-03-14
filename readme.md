@@ -49,3 +49,6 @@ Choose to download any or all of the following models on startup:
 ## License
 
 Apache-2.0
+
+---
+*Keywords: AI Image Generation, Free Image Editor, Google Colab VRAM 15GB, FLUX.2, FLUX Inpainting, Qwen-Image-Edit conversational AI, Z-Image Turbo, Fooocus Alternative, ComfyUI backend, Zero Setup, T4 GPU, Open Source Image Studio, Gradio App*
