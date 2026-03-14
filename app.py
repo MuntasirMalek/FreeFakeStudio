@@ -368,17 +368,7 @@ def preview_auto_mask(image, mask_mode):
         return None
     return generate_auto_mask(image, mask_mode)
 
-def update_steps_range(model_name):
-    """Update steps slider range based on selected model."""
-    if model_name == "⚡ Z-Image Turbo":
-        return gr.update(value=8, maximum=50, minimum=1)
-    elif model_name == "🔮 FLUX.2-klein 9B":
-        return gr.update(value=8, maximum=50, minimum=1)
-    elif model_name == "🌊 FLUX.2-klein 4B":
-        return gr.update(value=8, maximum=50, minimum=1)
-    elif model_name == "🎨 Qwen-Image-Edit":
-        return gr.update(value=8, maximum=50, minimum=1)
-    return gr.update()
+
 
 
 # ── Build UI ───────────────────────────────────────────────
@@ -423,7 +413,7 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="CheapFakeStudio") as demo:
                     gen_dl = gr.File(label="Download All", file_count="multiple")
                     gen_seed_out = gr.Textbox(label="Seed Used", interactive=False, show_copy_button=True)
 
-            gen_model.change(update_steps_range, [gen_model], [gen_steps])
+
             gen_btn.click(
                 generate_image,
                 [gen_model, gen_prompt, gen_neg, gen_aspect, gen_seed, gen_cfg, gen_denoise, gen_num, gen_steps],
@@ -457,7 +447,7 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="CheapFakeStudio") as demo:
                     i2i_dl = gr.File(label="Download All", file_count="multiple")
                     i2i_seed_out = gr.Textbox(label="Seed Used", interactive=False, show_copy_button=True)
 
-            i2i_model.change(update_steps_range, [i2i_model], [i2i_steps])
+
             i2i_btn.click(
                 do_img2img,
                 [i2i_model, i2i_img, i2i_prompt, i2i_neg, i2i_seed, i2i_cfg, i2i_denoise, i2i_num, i2i_steps],
@@ -511,7 +501,7 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="CheapFakeStudio") as demo:
                     inp_auto_mask_state = gr.State(value=None)
 
             # Events
-            inp_model.change(update_steps_range, [inp_model], [inp_steps])
+
             inp_mask_mode.change(toggle_inpaint_inputs, [inp_mask_mode],
                                  [inp_editor, inp_image, inp_mask_preview, inp_edit_mask_btn])
             inp_image.change(preview_auto_mask, [inp_image, inp_mask_mode], [inp_mask_preview])
