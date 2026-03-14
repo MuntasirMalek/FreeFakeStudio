@@ -352,11 +352,11 @@ def update_steps_range(model_name):
     if model_name == "⚡ Z-Image Turbo":
         return gr.update(value=8, maximum=50, minimum=1)
     elif model_name == "🔮 FLUX.2-klein 9B":
-        return gr.update(value=4, maximum=50, minimum=1)
+        return gr.update(value=8, maximum=50, minimum=1)
     elif model_name == "🌊 FLUX.2-klein 4B":
-        return gr.update(value=20, maximum=50, minimum=1)
+        return gr.update(value=8, maximum=50, minimum=1)
     elif model_name == "🎨 Qwen-Image-Edit":
-        return gr.update(value=40, maximum=50, minimum=10)
+        return gr.update(value=8, maximum=50, minimum=1)
     return gr.update()
 
 
