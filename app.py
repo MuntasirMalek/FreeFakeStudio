@@ -277,6 +277,11 @@ CSS = """
 .image-editor-container, .image-editor-container .wrapper, .svelte-1p1fptw {
     overflow: hidden !important;
 }
+
+/* Hide the hand/pan tool button from ImageEditor toolbar */
+button[aria-label="Pan"], button[aria-label="Move"] {
+    display: none !important;
+}
 """
 
 zfooocus_theme = gr.themes.Base(
@@ -343,7 +348,6 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="CheapFakeStudio") as demo:
     gr.HTML("""
     <div>
         <h1 class="main-title">🎭 <span>CheapFakeStudio</span></h1>
-        <p class="subtitle">Z-Image Turbo · FLUX.2-klein · Qwen-Image-Edit — Multi-Model Studio</p>
     </div>
     """)
 
@@ -380,7 +384,7 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="CheapFakeStudio") as demo:
                     gen_seed_out = gr.Textbox(label="Seed Used", interactive=False, show_copy_button=True)
 
             gen_model.change(update_steps_range, [gen_model], [gen_steps])
-            gen_btn.click(lambda: ([], None, ""), outputs=[gen_gallery, gen_dl, gen_seed_out]).then(
+            gen_btn.click(
                 generate_image,
                 [gen_model, gen_prompt, gen_neg, gen_aspect, gen_seed, gen_cfg, gen_denoise, gen_num, gen_steps],
                 [gen_gallery, gen_dl, gen_seed_out])
@@ -414,7 +418,7 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="CheapFakeStudio") as demo:
                     i2i_seed_out = gr.Textbox(label="Seed Used", interactive=False, show_copy_button=True)
 
             i2i_model.change(update_steps_range, [i2i_model], [i2i_steps])
-            i2i_btn.click(lambda: ([], None, ""), outputs=[i2i_gallery, i2i_dl, i2i_seed_out]).then(
+            i2i_btn.click(
                 do_img2img,
                 [i2i_model, i2i_img, i2i_prompt, i2i_neg, i2i_seed, i2i_cfg, i2i_denoise, i2i_num, i2i_steps],
                 [i2i_gallery, i2i_dl, i2i_seed_out])
