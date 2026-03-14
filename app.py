@@ -15,17 +15,19 @@ import cv2
 # ── Engine imports (lazy) ──────────────────────────────────
 import engine_zimage
 import engine_flux
+import engine_flux4b
 import engine_qwen_edit
 
 # ── Model Manager ─────────────────────────────────────────
 _current_model = None
 
-MODEL_GEN = ["⚡ Z-Image Turbo", "🔮 FLUX.2-klein"]
-MODEL_EDIT = ["⚡ Z-Image Turbo", "🔮 FLUX.2-klein", "🎨 Qwen-Image-Edit"]
+MODEL_GEN = ["⚡ Z-Image Turbo", "🔮 FLUX.2-klein 9B", "🌊 FLUX.2-klein 4B"]
+MODEL_EDIT = ["⚡ Z-Image Turbo", "🔮 FLUX.2-klein 9B", "🌊 FLUX.2-klein 4B", "🎨 Qwen-Image-Edit"]
 
 _ENGINE_MAP = {
     "⚡ Z-Image Turbo": engine_zimage,
-    "🔮 FLUX.2-klein":  engine_flux,
+    "🔮 FLUX.2-klein 9B":  engine_flux,
+    "🌊 FLUX.2-klein 4B":  engine_flux4b,
     "🎨 Qwen-Image-Edit": engine_qwen_edit,
 }
 
@@ -317,8 +319,10 @@ def update_steps_range(model_name):
     """Update steps slider range based on selected model."""
     if model_name == "⚡ Z-Image Turbo":
         return gr.update(value=8, maximum=8, minimum=1)
-    elif model_name == "🔮 FLUX.2-klein":
+    elif model_name == "🔮 FLUX.2-klein 9B":
         return gr.update(value=4, maximum=50, minimum=1)
+    elif model_name == "🌊 FLUX.2-klein 4B":
+        return gr.update(value=20, maximum=50, minimum=1)
     elif model_name == "🎨 Qwen-Image-Edit":
         return gr.update(value=40, maximum=50, minimum=10)
     return gr.update()
