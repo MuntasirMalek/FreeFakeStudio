@@ -428,7 +428,8 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="Z-Fooocus") as demo:
                         value="🖌️ Manual Paint", label="Mask Mode",
                     )
                     inp_editor = gr.ImageEditor(
-                        label="Upload & Paint Mask", type="pil", height=800,
+                        label="Upload & Paint Mask", type="pil",
+                        canvas_size=(2048, 2048),
                         brush=gr.Brush(colors=["#ffffff"], default_size=40),
                         eraser=gr.Eraser(default_size=30),
                         sources=["upload"], transforms=[], visible=True,

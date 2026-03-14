@@ -216,11 +216,19 @@ def inpaint(original, mask_combined, prompt, negative, seed, cfg, denoise, steps
             diff_node = n["DifferentialDiffusion"]
             if hasattr(diff_node, "apply"):
                 res = diff_node.apply(model_to_sample)
-                model_to_sample = res[0] if isinstance(res, tuple) else res
+            elif hasattr(diff_node.__class__, "execute"):
+                res = diff_node.__class__.execute(model_to_sample)
+            elif hasattr(diff_node, "execute"):
+                res = diff_node.execute(model_to_sample)
             else:
-                m = model_to_sample.clone()
-                m.set_model_denoise_mask_function(lambda *args, **kwargs: diff_node.__class__.forward(*args, **kwargs, strength=1.0))
-                model_to_sample = m
+                res = model_to_sample
+                
+            if isinstance(res, tuple):
+                model_to_sample = res[0]
+            elif hasattr(res, "__class__") and "NodeOutput" in res.__class__.__name__:
+                model_to_sample = res[0]
+            else:
+                model_to_sample = res
         except Exception as e:
             print(f"⚠️ DifferentialDiffusion ignored due to API change: {e}")
 
