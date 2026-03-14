@@ -174,12 +174,10 @@ def inpaint(original, mask_combined, prompt, negative, seed, cfg, denoise, steps
     mask_pil = Image.fromarray(cropped_mask).resize((cw, ch), Image.NEAREST)
     mask_resized = np.array(mask_pil)
 
-    filled = _fooocus_fill(np.array(crop_pil), mask_resized)
-    filled_pil = Image.fromarray(filled)
-
-    filled_tensor = _pil_to_tensor(filled_pil)
-    latent_base = n["VAEEncode"].encode(_vae, filled_tensor)[0]
+    # Encode raw unadulterated pixels so DifferentialDiffusion retains full structural context under the 0.85 denoise
+    crop_tensor = _pil_to_tensor(crop_pil)
     mask_tensor = torch.from_numpy(mask_resized.astype(np.float32) / 255.0).unsqueeze(0)
+    latent_base = n["VAEEncode"].encode(_vae, crop_tensor)[0]
 
     pos = n["CLIPTextEncode"].encode(_clip, prompt)[0]
     neg = n["CLIPTextEncode"].encode(_clip, negative)[0]
@@ -202,7 +200,7 @@ def inpaint(original, mask_combined, prompt, negative, seed, cfg, denoise, steps
             if isinstance(res, tuple):
                 model_to_sample = res[0]
             elif hasattr(res, "__class__") and "NodeOutput" in res.__class__.__name__:
-                model_to_sample = res[0]
+                model_to_sample = res.args[0] if hasattr(res, "args") else res[0]
             else:
                 model_to_sample = res
         except Exception as e:
@@ -224,7 +222,7 @@ def inpaint(original, mask_combined, prompt, negative, seed, cfg, denoise, steps
     mask_float = np.array(mask_composite).astype(np.float32)[:, :, None] / 255.0
 
     mask_blur = Image.fromarray((mask_float[:, :, 0] * 255).astype(np.uint8))
-    mask_blur = mask_blur.filter(ImageFilter.GaussianBlur(3))
+    mask_blur = mask_blur.filter(ImageFilter.GaussianBlur(32))
     mask_float = np.array(mask_blur).astype(np.float32)[:, :, None] / 255.0
 
     old_region = result[a:b, c:d].astype(np.float32)
