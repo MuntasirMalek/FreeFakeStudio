@@ -332,7 +332,7 @@ def preview_auto_mask(image, mask_mode):
 def update_steps_range(model_name):
     """Update steps slider range based on selected model."""
     if model_name == "⚡ Z-Image Turbo":
-        return gr.update(value=8, maximum=8, minimum=1)
+        return gr.update(value=8, maximum=50, minimum=1)
     elif model_name == "🔮 FLUX.2-klein 9B":
         return gr.update(value=4, maximum=50, minimum=1)
     elif model_name == "🌊 FLUX.2-klein 4B":
@@ -370,7 +370,7 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="CheapFakeStudio") as demo:
                         gen_aspect = gr.Dropdown(ASPECTS, value="1024x1024 (1:1)", label="Aspect Ratio")
                         gen_seed = gr.Number(value=0, label="Seed (0 = random)", precision=0)
                     gen_num = gr.Slider(1, 16, value=2, step=1, label="Number of Images")
-                    gen_steps = gr.Slider(1, 8, value=8, step=1, label="Steps")
+                    gen_steps = gr.Slider(1, 50, value=8, step=1, label="Steps")
                     gen_btn = gr.Button("🚀 Generate", variant="primary", size="lg")
                     with gr.Accordion("⚙️ Advanced", open=False):
                         gen_cfg = gr.Slider(0.5, 10.0, value=1.0, step=0.1, label="CFG")
@@ -402,7 +402,7 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="CheapFakeStudio") as demo:
                     i2i_prompt = gr.Textbox(label="Prompt / Edit Instruction", lines=2,
                         placeholder="e.g., change the dress to a red saree")
                     i2i_num = gr.Slider(1, 16, value=2, step=1, label="Number of Images")
-                    i2i_steps = gr.Slider(1, 8, value=8, step=1, label="Steps")
+                    i2i_steps = gr.Slider(1, 50, value=8, step=1, label="Steps")
                     i2i_btn = gr.Button("✨ Transform", variant="primary", size="lg")
                     with gr.Accordion("⚙️ Advanced", open=False):
                         i2i_cfg = gr.Slider(0.5, 10.0, value=1.0, step=0.1, label="CFG")
@@ -452,7 +452,7 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="CheapFakeStudio") as demo:
                     inp_prompt = gr.Textbox(label="What should the masked area become?", lines=2,
                         placeholder="e.g., a tropical beach background")
                     inp_num = gr.Slider(1, 16, value=2, step=1, label="Number of Images")
-                    inp_steps = gr.Slider(1, 50, value=20, step=1, label="Steps")
+                    inp_steps = gr.Slider(1, 50, value=8, step=1, label="Steps")
                     inp_btn = gr.Button("🎨 Inpaint", variant="primary", size="lg")
                     with gr.Accordion("⚙️ Advanced", open=False):
                         inp_cfg = gr.Slider(0.5, 10.0, value=1.0, step=0.1, label="CFG")
