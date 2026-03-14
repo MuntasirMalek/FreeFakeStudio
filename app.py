@@ -13,9 +13,9 @@ import gradio as gr
 import cv2
 
 # ── Engine imports (lazy) ──────────────────────────────────
-import engine_zimage
-import engine_flux
-import engine_flux4b
+import engine_z_image
+import engine_flux_klein
+import engine_flux_klein_4b
 import engine_qwen_edit
 
 # ── Model Manager ─────────────────────────────────────────
@@ -25,9 +25,9 @@ MODEL_GEN = ["⚡ Z-Image Turbo", "🔮 FLUX.2-klein 9B", "🌊 FLUX.2-klein 4B"
 MODEL_EDIT = ["🔮 FLUX.2-klein 9B", "🌊 FLUX.2-klein 4B", "🎨 Qwen-Image-Edit"]
 
 _ENGINE_MAP = {
-    "⚡ Z-Image Turbo": engine_zimage,
-    "🔮 FLUX.2-klein 9B":  engine_flux,
-    "🌊 FLUX.2-klein 4B":  engine_flux4b,
+    "⚡ Z-Image Turbo": engine_z_image,
+    "🔮 FLUX.2-klein 9B":  engine_flux_klein,
+    "🌊 FLUX.2-klein 4B":  engine_flux_klein_4b,
     "🎨 Qwen-Image-Edit": engine_qwen_edit,
 }
 
