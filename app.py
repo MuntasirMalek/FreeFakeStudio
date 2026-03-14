@@ -383,7 +383,7 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="Z-Fooocus") as demo:
             gr.Markdown("Upload a photo and describe the edit. Use **Qwen-Image-Edit** for instruction-based editing (best quality).")
             with gr.Row():
                 with gr.Column(scale=1):
-                    i2i_model = gr.Dropdown(MODEL_EDIT, value="⚡ Z-Image Turbo",
+                    i2i_model = gr.Dropdown(MODEL_EDIT, value=MODEL_EDIT[0],
                                              label="Model")
                     i2i_img = gr.Image(type="pil", label="Upload Photo", height=400, sources=["upload"])
                     i2i_prompt = gr.Textbox(label="Prompt / Edit Instruction", lines=2,
@@ -416,7 +416,7 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="Z-Fooocus") as demo:
         with gr.Tab("🎨 Inpaint"):
             with gr.Row():
                 with gr.Column(scale=1):
-                    inp_model = gr.Dropdown(MODEL_EDIT, value="⚡ Z-Image Turbo",
+                    inp_model = gr.Dropdown(MODEL_EDIT, value=MODEL_EDIT[0],
                                              label="Model")
                     inp_mask_mode = gr.Radio(
                         choices=["🖌️ Manual Paint", "🏞️ Background Only", "🎭 Everything Except Face"],
@@ -501,7 +501,7 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="Z-Fooocus") as demo:
     """)
 
 # ── Load default model on startup ──────────────────────────
-engine_zimage.load()
+engine_z_image.load()
 _current_model = "⚡ Z-Image Turbo"
 
 demo.launch(share=True, debug=True)
