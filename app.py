@@ -273,9 +273,14 @@ CSS = """
 .subtitle { text-align:center; color:#9ca3af; margin-bottom:15px; font-size:1.05em; }
 .footer-link { color:#60a5fa !important; text-decoration:none; }
 
-/* Prevent scrollbars from interrupting brush strokes in ImageEditor */
+/* Fix ImageEditor mask cutoff glitch on right/bottom edges */
 .image-editor-container, .image-editor-container .wrapper, .svelte-1p1fptw {
-    overflow: hidden !important;
+    overflow: visible !important;
+}
+.image-editor-container canvas {
+    min-width: 100% !important;
+    min-height: 100% !important;
+    touch-action: none !important;
 }
 """
 
