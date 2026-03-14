@@ -52,15 +52,20 @@ def load():
             os.system("swapon /swapfile")
             print("✅ Swap file active.")
     n = _get_nodes()
-    print("⏳ Loading FLUX.2-klein 9B FP8...")
+    print("⏳ Loading FLUX.2-klein 9B GGUF...")
     with torch.inference_mode():
-        # FLUX.2-klein uses its own architecture — try loading via ComfyUI
-        _unet = n["UNETLoader"].load_unet(
-            "flux-2-klein-9b-kv-fp8.safetensors", "fp8_e4m3fn_fast"
+        # Load GGUF UNET
+        _unet = n["UnetLoaderGGUF"].load_unet_gguf(
+            unet_name="flux-2-klein-9b-q4_k_m.gguf"
         )[0]
-        # FLUX.2-klein requires Qwen3 8B (4096-dim), not 4B (2560-dim)
-        # Using fp4mixed (6.8GB) to fit on T4
-        _clip = n["CLIPLoader"].load_clip("qwen_3_8b_fp4mixed.safetensors", type="flux2")[0]
+        
+        # Load GGUF CLIP (Single Qwen3 8B, no T5 needed for klein)
+        _clip = n["CLIPLoaderGGUF"].load_clip(
+            clip_name="Qwen3-8B-Q4_K_M.gguf",
+            type="flux2"
+        )[0]
+        
+        # Load VAE
         _vae  = n["VAELoader"].load_vae("flux2-vae.safetensors")[0]
     _loaded = True
     print("✅ FLUX.2-klein loaded!")
