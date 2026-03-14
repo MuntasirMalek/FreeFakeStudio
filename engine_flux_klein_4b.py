@@ -47,7 +47,7 @@ def load():
             "flux-2-klein-4b.safetensors", "fp8_e4m3fn_fast"
         )[0]
         # FLUX.2-specific Qwen3 4B encoder (7680-dim, NOT the Z-Image one which is 2560-dim)
-        _clip = n["CLIPLoader"].load_clip("qwen_3_4b_fp4_flux2.safetensors", type="lumina2")[0]
+        _clip = n["CLIPLoader"].load_clip("qwen_3_4b_fp4_flux2.safetensors", type="flux2")[0]
         _vae  = n["VAELoader"].load_vae("flux2-vae.safetensors")[0]
     _loaded = True
     print("✅ FLUX.2-klein 4B loaded!")
