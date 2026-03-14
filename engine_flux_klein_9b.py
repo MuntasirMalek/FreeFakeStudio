@@ -49,6 +49,24 @@ def _get_nodes():
         }
         if "CLIPLoaderGGUF" in all_nodes:
             _nodes["CLIPLoaderGGUF"] = all_nodes["CLIPLoaderGGUF"]()
+            
+        try:
+            import nodes
+            if hasattr(nodes, "init_extra_nodes"):
+                nodes.init_extra_nodes()
+            from nodes import NODE_CLASS_MAPPINGS as ALL_NODES
+            if "DifferentialDiffusion" in ALL_NODES:
+                _nodes["DifferentialDiffusion"] = ALL_NODES["DifferentialDiffusion"]()
+        except:
+            pass
+            
+        if "DifferentialDiffusion" not in _nodes:
+            try:
+                from comfy_extras.nodes_differential_diffusion import DifferentialDiffusion
+                _nodes["DifferentialDiffusion"] = DifferentialDiffusion()
+            except ImportError:
+                pass
+                
     return _nodes
 
 # ── Load / Unload ──────────────────────────────────────────
@@ -191,8 +209,13 @@ def inpaint(original, mask_combined, prompt, negative, seed, cfg, denoise, steps
     neg = n["CLIPTextEncode"].encode(_clip, negative)[0]
 
     latent = n["SetLatentNoiseMask"].set_mask(latent_base, mask_tensor)[0]
+    
+    model_to_sample = _unet
+    if "DifferentialDiffusion" in n:
+        model_to_sample = n["DifferentialDiffusion"].apply(model_to_sample)[0]
+
     samples = n["KSampler"].sample(
-        _unet, seed, int(steps), float(cfg),
+        model_to_sample, seed, int(steps), float(cfg),
         "euler", "simple", pos, neg, latent, denoise=float(denoise)
     )[0]
 

@@ -272,6 +272,11 @@ CSS = """
 }
 .subtitle { text-align:center; color:#9ca3af; margin-bottom:15px; font-size:1.05em; }
 .footer-link { color:#60a5fa !important; text-decoration:none; }
+
+/* Prevent scrollbars from interrupting brush strokes in ImageEditor */
+.image-editor-container, .image-editor-container .wrapper, .svelte-1p1fptw {
+    overflow: hidden !important;
+}
 """
 
 zfooocus_theme = gr.themes.Base(
@@ -385,7 +390,7 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="Z-Fooocus") as demo:
                 with gr.Column(scale=1):
                     i2i_model = gr.Dropdown(MODEL_EDIT, value=MODEL_EDIT[0],
                                              label="Model")
-                    i2i_img = gr.Image(type="pil", label="Upload Photo", height=400, sources=["upload"])
+                    i2i_img = gr.Image(type="pil", label="Upload Photo", sources=["upload"])
                     i2i_prompt = gr.Textbox(label="Prompt / Edit Instruction", lines=2,
                         placeholder="e.g., change the dress to a red saree")
                     i2i_num = gr.Slider(1, 16, value=2, step=1, label="Number of Images")
@@ -423,12 +428,12 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="Z-Fooocus") as demo:
                         value="🖌️ Manual Paint", label="Mask Mode",
                     )
                     inp_editor = gr.ImageEditor(
-                        label="Upload & Paint Mask", type="pil", height=450,
+                        label="Upload & Paint Mask", type="pil",
                         brush=gr.Brush(colors=["#ffffff"], default_size=40),
                         eraser=gr.Eraser(default_size=30),
                         sources=["upload"], transforms=[], visible=True,
                     )
-                    inp_image = gr.Image(type="pil", label="Upload Photo", height=400,
+                    inp_image = gr.Image(type="pil", label="Upload Photo",
                                          visible=False, sources=["upload"])
                     inp_mask_preview = gr.Image(label="Mask Preview (white = will be changed)",
                                                  height=300, visible=False, interactive=False)
