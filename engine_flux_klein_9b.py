@@ -49,7 +49,7 @@ def load():
         
         # Load GGUF CLIP (Single Qwen3 8B, no T5 needed for klein)
         _clip = n["CLIPLoaderGGUF"].load_clip(
-            clip_name="Qwen3-8B-Q4_K_M.gguf",
+            clip_name="Qwen3-8B-Q2_K.gguf",
             type="flux2"
         )[0]
         
