@@ -1,5 +1,5 @@
 # ============================================================
-#  Z-Fooocus — Multi-Model Fooocus-style UI
+#  CheapFakesStudio — Multi-Model AI Image Studio
 #  Models: Z-Image Turbo · FLUX.2-klein · Qwen-Image-Edit
 #  Built for Google Colab T4 (15GB VRAM)
 # ============================================================
@@ -338,11 +338,11 @@ def update_steps_range(model_name):
 
 
 # ── Build UI ───────────────────────────────────────────────
-with gr.Blocks(theme=zfooocus_theme, css=CSS, title="Z-Fooocus") as demo:
+with gr.Blocks(theme=zfooocus_theme, css=CSS, title="CheapFakesStudio") as demo:
 
     gr.HTML("""
     <div>
-        <h1 class="main-title">⚡ <span>Z-Fooocus</span></h1>
+        <h1 class="main-title">🎭 <span>CheapFakesStudio</span></h1>
         <p class="subtitle">Z-Image Turbo · FLUX.2-klein · Qwen-Image-Edit — Multi-Model Studio</p>
     </div>
     """)
@@ -510,7 +510,7 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="Z-Fooocus") as demo:
     gr.Markdown("""
     ---
     <p style="text-align:center; color:#6b7280; font-size:0.85em;">
-    ⚡ Z-Fooocus ·
+    🎭 CheapFakesStudio ·
     <a class="footer-link" href="https://github.com/Tongyi-MAI/Z-Image">Z-Image</a> ·
     <a class="footer-link" href="https://github.com/lllyasviel/Fooocus">Fooocus</a> ·
     <a class="footer-link" href="https://huggingface.co/black-forest-labs/FLUX.2-klein-9b-kv-fp8">FLUX.2</a> ·
