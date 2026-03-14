@@ -273,14 +273,9 @@ CSS = """
 .subtitle { text-align:center; color:#9ca3af; margin-bottom:15px; font-size:1.05em; }
 .footer-link { color:#60a5fa !important; text-decoration:none; }
 
-/* Fix ImageEditor mask cutoff glitch on right/bottom edges */
+/* Prevent scrollbars from interrupting brush strokes in ImageEditor */
 .image-editor-container, .image-editor-container .wrapper, .svelte-1p1fptw {
-    overflow: visible !important;
-}
-.image-editor-container canvas {
-    min-width: 100% !important;
-    min-height: 100% !important;
-    touch-action: none !important;
+    overflow: hidden !important;
 }
 """
 
@@ -433,7 +428,7 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="Z-Fooocus") as demo:
                         value="🖌️ Manual Paint", label="Mask Mode",
                     )
                     inp_editor = gr.ImageEditor(
-                        label="Upload & Paint Mask", type="pil",
+                        label="Upload & Paint Mask", type="pil", height=800,
                         brush=gr.Brush(colors=["#ffffff"], default_size=40),
                         eraser=gr.Eraser(default_size=30),
                         sources=["upload"], transforms=[], visible=True,
