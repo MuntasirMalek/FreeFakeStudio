@@ -47,7 +47,7 @@ def load():
         )[0]
         # FLUX.2-klein requires Qwen3 8B (4096-dim), not 4B (2560-dim)
         # Using fp4mixed (6.8GB) to fit on T4
-        _clip = n["CLIPLoader"].load_clip("qwen_3_8b_fp4mixed.safetensors", type="lumina2")[0]
+        _clip = n["CLIPLoader"].load_clip("qwen_3_8b_fp4mixed.safetensors", type="flux2")[0]
         _vae  = n["VAELoader"].load_vae("flux2-vae.safetensors")[0]
     _loaded = True
     print("✅ FLUX.2-klein loaded!")
