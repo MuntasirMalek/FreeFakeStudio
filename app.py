@@ -14,7 +14,7 @@ import cv2
 
 # ── Engine imports (lazy) ──────────────────────────────────
 import engine_z_image
-import engine_flux_klein
+import engine_flux_klein_9b
 import engine_flux_klein_4b
 import engine_qwen_edit_2511
 
@@ -26,7 +26,7 @@ MODEL_EDIT = ["🔮 FLUX.2-klein 9B", "🌊 FLUX.2-klein 4B", "🎨 Qwen-Image-E
 
 _ENGINE_MAP = {
     "⚡ Z-Image Turbo": engine_z_image,
-    "🔮 FLUX.2-klein 9B":  engine_flux_klein,
+    "🔮 FLUX.2-klein 9B":  engine_flux_klein_9b,
     "🌊 FLUX.2-klein 4B":  engine_flux_klein_4b,
     "🎨 Qwen-Image-Edit": engine_qwen_edit_2511,
 }
