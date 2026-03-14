@@ -22,7 +22,7 @@ import engine_qwen_edit
 _current_model = None
 
 MODEL_GEN = ["⚡ Z-Image Turbo", "🔮 FLUX.2-klein 9B", "🌊 FLUX.2-klein 4B"]
-MODEL_EDIT = ["⚡ Z-Image Turbo", "🔮 FLUX.2-klein 9B", "🌊 FLUX.2-klein 4B", "🎨 Qwen-Image-Edit"]
+MODEL_EDIT = ["🔮 FLUX.2-klein 9B", "🌊 FLUX.2-klein 4B", "🎨 Qwen-Image-Edit"]
 
 _ENGINE_MAP = {
     "⚡ Z-Image Turbo": engine_zimage,
