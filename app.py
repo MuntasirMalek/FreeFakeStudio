@@ -282,6 +282,24 @@ CSS = """
 button[aria-label="Pan"], button[aria-label="Move"] {
     display: none !important;
 }
+
+/* Gallery shift+click hint */
+.gallery-item { cursor: pointer; }
+"""
+
+# JavaScript to open gallery images in a new tab on shift+click
+JS_SHIFT_CLICK = """
+<script>
+document.addEventListener('click', function(e) {
+    if (!e.shiftKey) return;
+    const img = e.target.closest('.gallery-item img, .preview img, .thumbnails img');
+    if (img && img.src) {
+        e.preventDefault();
+        e.stopPropagation();
+        window.open(img.src, '_blank');
+    }
+}, true);
+</script>
 """
 
 zfooocus_theme = gr.themes.Base(
@@ -350,6 +368,7 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="CheapFakeStudio") as demo:
         <h1 class="main-title">🎭 <span>CheapFakeStudio</span></h1>
     </div>
     """)
+    gr.HTML(JS_SHIFT_CLICK)
 
     with gr.Tabs():
 
@@ -438,8 +457,8 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="CheapFakeStudio") as demo:
                     inp_editor = gr.ImageEditor(
                         label="Upload & Paint Mask", type="pil",
                         canvas_size=(2048, 2048),
-                        brush=gr.Brush(colors=["#ffffff"], default_size=40),
-                        eraser=gr.Eraser(default_size=30),
+                        brush=gr.Brush(colors=["#ffffff"], default_size=40, default_color="#ffffff"),
+                        eraser=gr.Eraser(default_size=40),
                         sources=["upload"], transforms=[],
                         layers=False, visible=True,
                     )
