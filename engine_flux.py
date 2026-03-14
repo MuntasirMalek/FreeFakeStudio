@@ -47,7 +47,7 @@ def load():
         )[0]
         # FLUX.2-klein uses Qwen3 text encoder
         # Try loading the same qwen clip — if a larger one is available, switch here
-        _clip = n["CLIPLoader"].load_clip("qwen_3_4b.safetensors", type="lumina2")[0]
+        _clip = n["CLIPLoader"].load_clip("qwen_3_4b_fp8_mixed.safetensors", type="lumina2")[0]
         _vae  = n["VAELoader"].load_vae("ae.safetensors")[0]
     _loaded = True
     print("✅ FLUX.2-klein loaded!")

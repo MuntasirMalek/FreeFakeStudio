@@ -42,7 +42,7 @@ def load():
     print("⏳ Loading Z-Image Turbo FP8...")
     with torch.inference_mode():
         _unet = n["UNETLoader"].load_unet("z-image-turbo-fp8-e4m3fn.safetensors", "fp8_e4m3fn_fast")[0]
-        _clip = n["CLIPLoader"].load_clip("qwen_3_4b.safetensors", type="lumina2")[0]
+        _clip = n["CLIPLoader"].load_clip("qwen_3_4b_fp8_mixed.safetensors", type="lumina2")[0]
         _vae  = n["VAELoader"].load_vae("ae.safetensors")[0]
     _loaded = True
     print("✅ Z-Image Turbo loaded!")
