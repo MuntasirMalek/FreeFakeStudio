@@ -252,9 +252,11 @@ def inpaint(original, mask_combined, prompt, negative, seed, cfg, denoise, steps
         raise ValueError("No mask detected.")
     a, b, c, d = crop
 
+    # Crop the image and mask to the active region
     cropped_img = np.array(original)[a:b, c:d]
     cropped_mask = mask_combined[a:b, c:d]
 
+    # Resize to multiples of 64
     crop_pil = Image.fromarray(cropped_img)
     crop_pil = _resize_to_multiple(crop_pil, multiple=64, max_dim=1024)
     cw, ch = crop_pil.size
@@ -262,17 +264,39 @@ def inpaint(original, mask_combined, prompt, negative, seed, cfg, denoise, steps
     mask_pil = Image.fromarray(cropped_mask).resize((cw, ch), Image.NEAREST)
     mask_resized = np.array(mask_pil)
 
+    # 1. Fill the cropped mask area with blurry background (fooocus fill)
     filled = _fooocus_fill(np.array(crop_pil), mask_resized)
     filled_pil = Image.fromarray(filled)
-
     filled_tensor = _pil_to_tensor(filled_pil)
-    latent_base = _vae_encode(filled_tensor)
-    mask_tensor = torch.from_numpy(mask_resized.astype(np.float32) / 255.0).unsqueeze(0)
+    
+    # 2. Extract latents for both the filled background and the pristine original crop
+    latent_filled = _vae_encode(filled_tensor)
+    latent_raw = _vae_encode(_pil_to_tensor(crop_pil))
+    
+    # Qwen-Image-Edit needs 64 channels (input image condition concatenated).
+    # We provide the UNMODIFIED raw image as the context conditioning.
+    cond_latent = latent_raw["samples"].clone()
+
+    # Create the tensor mask downscaled for latents ([B,C,H,W])
+    mask_tensor = torch.from_numpy(mask_resized.astype(np.float32) / 255.0).unsqueeze(0).unsqueeze(0)
+    # Resize mask to match latent dimensions (1/8th of image)
+    import torch.nn.functional as F
+    latent_mask = F.interpolate(mask_tensor, size=(cond_latent.shape[2], cond_latent.shape[3]), mode='nearest')
 
     pos = n["CLIPTextEncode"].encode(_clip, prompt)[0]
     neg = n["CLIPTextEncode"].encode(_clip, negative)[0]
 
-    latent = n["SetLatentNoiseMask"].set_mask(latent_base, mask_tensor)[0]
+    # Structure Qwen-Image-Edit inputs:
+    # `concat_latent_image` = the pure, original image context
+    # `concat_mask` = the paint/inpaint region mask
+    cond_dict = {"concat_latent_image": cond_latent, "concat_mask": latent_mask}
+    
+    pos[0][1].update(cond_dict)
+    neg[0][1].update(cond_dict)
+
+    # Apply noise mask to the filled latent so we only denoise the masked area
+    latent = n["SetLatentNoiseMask"].set_mask(latent_filled, mask_tensor.squeeze(0))[0]
+
     samples = n["KSampler"].sample(
         _unet, seed, int(steps), float(cfg),
         "euler", "simple", pos, neg, latent, denoise=float(denoise)
