@@ -500,8 +500,23 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="Z-Fooocus") as demo:
     </p>
     """)
 
-# ── Load default model on startup ──────────────────────────
-engine_z_image.load()
-_current_model = "⚡ Z-Image Turbo"
+# ── Load first available model on startup ──────────────────
+import glob as _gl
+_model_files = {
+    "⚡ Z-Image Turbo":   "z-image-turbo-fp8-e4m3fn.safetensors",
+    "🌊 FLUX.2-klein 4B": "flux-2-klein-4b.safetensors",
+    "🔮 FLUX.2-klein 9B": "flux-2-klein-9b-kv-fp8.safetensors",
+}
+_diff_dir = "/content/ComfyUI/models/diffusion_models"
+for _name, _file in _model_files.items():
+    if os.path.exists(os.path.join(_diff_dir, _file)):
+        try:
+            _ENGINE_MAP[_name].load()
+            _current_model = _name
+            break
+        except Exception as e:
+            print(f"⚠️ Failed to load {_name}: {e}")
+else:
+    print("⚠️ No pre-loaded model — select one from the dropdown to load on first use")
 
 demo.launch(share=True, debug=True)
