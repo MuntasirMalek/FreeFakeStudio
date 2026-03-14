@@ -45,10 +45,10 @@ def load():
         _unet = n["UNETLoader"].load_unet(
             "flux-2-klein-9b-kv-fp8.safetensors", "fp8_e4m3fn_fast"
         )[0]
-        # FLUX.2-klein uses Qwen3 text encoder
-        # Try loading the same qwen clip — if a larger one is available, switch here
-        _clip = n["CLIPLoader"].load_clip("qwen_3_4b.safetensors", type="lumina2")[0]
-        _vae  = n["VAELoader"].load_vae("ae.safetensors")[0]
+        # FLUX.2-klein requires Qwen3 8B (4096-dim), not 4B (2560-dim)
+        # Using fp4mixed (6.8GB) to fit on T4
+        _clip = n["CLIPLoader"].load_clip("qwen_3_8b_fp4mixed.safetensors", type="lumina2")[0]
+        _vae  = n["VAELoader"].load_vae("flux2-vae.safetensors")[0]
     _loaded = True
     print("✅ FLUX.2-klein loaded!")
 
