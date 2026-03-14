@@ -287,9 +287,10 @@ button[aria-label="Pan"], button[aria-label="Move"] {
 .gallery-item { cursor: pointer; }
 """
 
-# JavaScript to open gallery images in a new tab on shift+click
-JS_SHIFT_CLICK = """
+# JavaScript: shift+click gallery to open in new tab + override brush max size
+JS_CUSTOM = """
 <script>
+// Shift+click gallery images to open in new tab
 document.addEventListener('click', function(e) {
     if (!e.shiftKey) return;
     const img = e.target.closest('.gallery-item img, .preview img, .thumbnails img');
@@ -299,6 +300,26 @@ document.addEventListener('click', function(e) {
         window.open(img.src, '_blank');
     }
 }, true);
+
+// Override brush/eraser size slider max from default ~100 to 300
+function boostBrushMax() {
+    document.querySelectorAll('input[type="range"]').forEach(function(slider) {
+        if (parseFloat(slider.max) > 10 && parseFloat(slider.max) <= 110) {
+            var parent = slider.closest('.image-editor, .image_editor');
+            if (!parent) {
+                var labels = slider.closest('.block, .wrap, div');
+                if (labels && labels.querySelector('canvas')) parent = labels;
+            }
+            if (parent || slider.closest('[data-testid]')) {
+                slider.max = 300;
+                slider.setAttribute('max', '300');
+            }
+        }
+    });
+}
+// Run periodically to catch dynamically created editors
+setInterval(boostBrushMax, 2000);
+setTimeout(boostBrushMax, 1000);
 </script>
 """
 
@@ -368,7 +389,7 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="CheapFakeStudio") as demo:
         <h1 class="main-title">🎭 <span>CheapFakeStudio</span></h1>
     </div>
     """)
-    gr.HTML(JS_SHIFT_CLICK)
+    gr.HTML(JS_CUSTOM)
 
     with gr.Tabs():
 
