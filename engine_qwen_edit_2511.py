@@ -287,11 +287,9 @@ def inpaint(original, mask_combined, prompt, negative, seed, cfg, denoise, steps
     pos[0][1].update(cond_dict)
     neg[0][1].update(cond_dict)
 
-    # For pure instruction editing on a mask, we just pass the RAW latent as the base,
-    # and we do NOT apply a hard SetLatentNoiseMask because the model itself 
-    # naturally respects the instruction + concat conditionals. Applying a hard 
-    # noise mask forces it to keep the base latent structure.
-    latent = latent_raw
+    # Apply SetLatentNoiseMask so that unmasked regions are perfectly preserved
+    # under denoise. mask_tensor is [1, 1, H, W], set_mask expects [B, H, W].
+    latent = n["SetLatentNoiseMask"].set_mask(latent_raw, mask_tensor.squeeze(0))[0]
 
     samples = n["KSampler"].sample(
         _unet, seed, int(steps), float(cfg),
