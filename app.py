@@ -16,7 +16,7 @@ import cv2
 import engine_z_image
 import engine_flux_klein
 import engine_flux_klein_4b
-import engine_qwen_edit
+import engine_qwen_edit_2511
 
 # ── Model Manager ─────────────────────────────────────────
 _current_model = None
@@ -28,7 +28,7 @@ _ENGINE_MAP = {
     "⚡ Z-Image Turbo": engine_z_image,
     "🔮 FLUX.2-klein 9B":  engine_flux_klein,
     "🌊 FLUX.2-klein 4B":  engine_flux_klein_4b,
-    "🎨 Qwen-Image-Edit": engine_qwen_edit,
+    "🎨 Qwen-Image-Edit": engine_qwen_edit_2511,
 }
 
 def _ensure_model(model_name):
