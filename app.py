@@ -307,10 +307,14 @@ def edit_mask_manually(image, mask_mode):
     else:
         raise gr.Error("Select an auto mask mode first.")
     auto_mask_data = {"mask": mask_np, "original": original}
-    img_np = np.array(original).copy()
-    img_np[mask_np > 127] = [255, 255, 255]
-    overlay_pil = Image.fromarray(img_np)
-    editor_value = {"background": overlay_pil, "layers": [], "composite": overlay_pil}
+    # Put the clean original as the background and the mask as an erasable RGBA layer
+    mask_layer = np.zeros((h, w, 4), dtype=np.uint8)
+    mask_layer[:, :, 0] = 255  # white R
+    mask_layer[:, :, 1] = 255  # white G
+    mask_layer[:, :, 2] = 255  # white B
+    mask_layer[:, :, 3] = mask_np  # alpha = mask (visible where masked)
+    mask_layer_pil = Image.fromarray(mask_layer, "RGBA")
+    editor_value = {"background": original, "layers": [mask_layer_pil], "composite": original}
     return (editor_value, "🖌️ Manual Paint",
             gr.update(visible=True), gr.update(visible=False),
             gr.update(visible=False), gr.update(visible=False), auto_mask_data)
@@ -432,7 +436,8 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="Z-Fooocus") as demo:
                         canvas_size=(2048, 2048),
                         brush=gr.Brush(colors=["#ffffff"], default_size=40),
                         eraser=gr.Eraser(default_size=30),
-                        sources=["upload"], transforms=[], visible=True,
+                        sources=["upload"], transforms=[],
+                        layers=False, visible=True,
                     )
                     inp_image = gr.Image(type="pil", label="Upload Photo",
                                          visible=False, sources=["upload"])
@@ -489,8 +494,15 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="Z-Fooocus") as demo:
             inp_send_btn.click(send_to_editor, [inp_gallery, inp_selected_idx],
                 [inp_editor, inp_mask_mode, inp_editor, inp_image, inp_mask_preview])
 
-            inp_btn.click(lambda: ([], None, ""), outputs=[inp_gallery, inp_dl, inp_seed_out]).then(
-                do_inpaint,
+            def do_inpaint_wrapper(model_name, editor_data, inp_image, prompt, negative,
+                                   seed, cfg, denoise, num_images, mask_mode,
+                                   auto_mask_data, steps):
+                return do_inpaint(model_name, editor_data, inp_image, prompt, negative,
+                                 seed, cfg, denoise, num_images, mask_mode,
+                                 auto_mask_data, steps)
+
+            inp_btn.click(
+                do_inpaint_wrapper,
                 [inp_model, inp_editor, inp_image, inp_prompt, inp_neg, inp_seed,
                  inp_cfg, inp_denoise, inp_num, inp_mask_mode, inp_auto_mask_state, inp_steps],
                 [inp_gallery, inp_dl, inp_seed_out])
