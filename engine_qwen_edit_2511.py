@@ -181,6 +181,9 @@ def img2img(input_image, prompt, negative, seed, cfg, denoise, steps=40):
     Instruction-based image editing via Qwen-Image-Edit.
     The model takes an input image + prompt instruction and edits accordingly.
     """
+    # Force minimum steps. Qwen-Image-Edit produces noise if steps are too low (e.g. 8).
+    steps = max(int(steps), 25)
+
     n = _get_nodes()
     input_image = _resize_to_multiple(input_image.convert("RGB"))
     img_tensor = _pil_to_tensor(input_image)
@@ -245,6 +248,9 @@ def _fooocus_fill(image_np, mask_np):
 @torch.inference_mode()
 def inpaint(original, mask_combined, prompt, negative, seed, cfg, denoise, steps=40):
     """Mask-based inpaint using Qwen-Image-Edit GGUF."""
+    # Force minimum steps. Qwen-Image-Edit produces noise if steps are too low (e.g. 8).
+    steps = max(int(steps), 25)
+
     n = _get_nodes()
 
     crop = _compute_crop_region(mask_combined)
