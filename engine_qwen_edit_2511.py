@@ -264,17 +264,12 @@ def inpaint(original, mask_combined, prompt, negative, seed, cfg, denoise, steps
     mask_pil = Image.fromarray(cropped_mask).resize((cw, ch), Image.NEAREST)
     mask_resized = np.array(mask_pil)
 
-    # 1. Fill the cropped mask area with blurry background (fooocus fill)
-    filled = _fooocus_fill(np.array(crop_pil), mask_resized)
-    filled_pil = Image.fromarray(filled)
-    filled_tensor = _pil_to_tensor(filled_pil)
-    
-    # 2. Extract latents for both the filled background and the pristine original crop
-    latent_filled = _vae_encode(filled_tensor)
+    # Qwen-Image-Edit handles inpainting natively via its concat conditions.
+    # It does NOT need a pre-blurred "Fooocus" fill background. The pristine 
+    # image latent is what it edits based on the mask.
     latent_raw = _vae_encode(_pil_to_tensor(crop_pil))
     
     # Qwen-Image-Edit needs 64 channels (input image condition concatenated).
-    # We provide the UNMODIFIED raw image as the context conditioning.
     cond_latent = latent_raw["samples"].clone()
 
     # Create the tensor mask downscaled for latents ([B,C,H,W])
@@ -287,15 +282,16 @@ def inpaint(original, mask_combined, prompt, negative, seed, cfg, denoise, steps
     neg = n["CLIPTextEncode"].encode(_clip, negative)[0]
 
     # Structure Qwen-Image-Edit inputs:
-    # `concat_latent_image` = the pure, original image context
-    # `concat_mask` = the paint/inpaint region mask
     cond_dict = {"concat_latent_image": cond_latent, "concat_mask": latent_mask}
     
     pos[0][1].update(cond_dict)
     neg[0][1].update(cond_dict)
 
-    # Apply noise mask to the filled latent so we only denoise the masked area
-    latent = n["SetLatentNoiseMask"].set_mask(latent_filled, mask_tensor.squeeze(0))[0]
+    # For pure instruction editing on a mask, we just pass the RAW latent as the base,
+    # and we do NOT apply a hard SetLatentNoiseMask because the model itself 
+    # naturally respects the instruction + concat conditionals. Applying a hard 
+    # noise mask forces it to keep the base latent structure.
+    latent = latent_raw
 
     samples = n["KSampler"].sample(
         _unet, seed, int(steps), float(cfg),
