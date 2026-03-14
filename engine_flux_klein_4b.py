@@ -159,22 +159,14 @@ def inpaint(original, mask_combined, prompt, negative, seed, cfg, denoise, steps
     """original: PIL Image, mask_combined: numpy uint8 array (255=masked)"""
     n = _get_nodes()
 
-    crop = _compute_crop_region(mask_combined)
-    if crop is None:
-        raise ValueError("No mask detected.")
-    a, b, c, d = crop
-
-    cropped_img = np.array(original)[a:b, c:d]
-    cropped_mask = mask_combined[a:b, c:d]
-
-    crop_pil = Image.fromarray(cropped_img)
-    crop_pil = _resize_to_multiple(crop_pil, multiple=64, max_dim=1024)
+    # Pass the full image to maintain aspect ratio and body proportions
+    crop_pil = _resize_to_multiple(original, multiple=64, max_dim=1024)
     cw, ch = crop_pil.size
 
-    mask_pil = Image.fromarray(cropped_mask).resize((cw, ch), Image.NEAREST)
+    mask_pil = Image.fromarray(mask_combined).resize((cw, ch), Image.NEAREST)
     mask_resized = np.array(mask_pil)
 
-    # Encode raw unadulterated pixels so DifferentialDiffusion retains full structural context under the 0.85 denoise
+    # Encode raw unadulterated pixels so DifferentialDiffusion retains full structural context under the denoise
     crop_tensor = _pil_to_tensor(crop_pil)
     mask_tensor = torch.from_numpy(mask_resized.astype(np.float32) / 255.0).unsqueeze(0)
     latent_base = n["VAEEncode"].encode(_vae, crop_tensor)[0]
@@ -212,22 +204,20 @@ def inpaint(original, mask_combined, prompt, negative, seed, cfg, denoise, steps
     )[0]
 
     decoded = n["VAEDecode"].decode(_vae, samples)[0].detach()
-    result_crop = np.array(decoded * 255, dtype=np.uint8)[0]
-    result_crop_pil = Image.fromarray(result_crop).resize((d - c, b - a), Image.LANCZOS)
-
-    # Composite back
+    result_full_np = np.array(decoded * 255, dtype=np.uint8)[0]
+    result_full_pil = Image.fromarray(result_full_np).resize(original.size, Image.LANCZOS)
+    
+    # Composite the generated full image back over the original image using the mask
     result = np.array(original).copy()
-    result_crop_np = np.array(result_crop_pil)
-    mask_composite = Image.fromarray(cropped_mask).resize((d - c, b - a), Image.LANCZOS)
+    mask_composite = Image.fromarray(mask_combined).resize(original.size, Image.LANCZOS)
     mask_float = np.array(mask_composite).astype(np.float32)[:, :, None] / 255.0
 
     mask_blur = Image.fromarray((mask_float[:, :, 0] * 255).astype(np.uint8))
     mask_blur = mask_blur.filter(ImageFilter.GaussianBlur(32))
     mask_float = np.array(mask_blur).astype(np.float32)[:, :, None] / 255.0
 
-    old_region = result[a:b, c:d].astype(np.float32)
-    new_region = result_crop_np.astype(np.float32)
+    old_region = result.astype(np.float32)
+    new_region = np.array(result_full_pil).astype(np.float32)
     blended = new_region * mask_float + old_region * (1 - mask_float)
-    result[a:b, c:d] = blended.clip(0, 255).astype(np.uint8)
-
-    return Image.fromarray(result)
+    
+    return Image.fromarray(blended.clip(0, 255).astype(np.uint8))
