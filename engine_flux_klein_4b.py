@@ -44,7 +44,7 @@ def load():
     print("⏳ Loading FLUX.2-klein 4B...")
     with torch.inference_mode():
         _unet = n["UNETLoader"].load_unet(
-            "flux-2-klein-4b.safetensors", "default"
+            "flux-2-klein-4b.safetensors", "fp8_e4m3fn_fast"
         )[0]
         # Same Qwen3 4B encoder as Z-Image Turbo (2560-dim, compatible)
         _clip = n["CLIPLoader"].load_clip("qwen_3_4b.safetensors", type="lumina2")[0]
