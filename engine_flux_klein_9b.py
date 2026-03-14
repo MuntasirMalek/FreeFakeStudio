@@ -38,25 +38,13 @@ def load():
     global _loaded, _unet, _clip, _vae
     if _loaded:
         return
-    # Linux Swap workaround for free Colab instances
-    import psutil
-    sys_ram_gb = psutil.virtual_memory().total / (1024**3)
-    if sys_ram_gb < 16:
-        import os
-        if not os.path.exists("/swapfile"):
-            print(f"⚠️ Low System RAM detected ({sys_ram_gb:.1f}GB).")
-            print("⚠️ Creating 8GB Swap File to prevent OS crash (May be slow due to disk swapping)...")
-            os.system("dd if=/dev/zero of=/swapfile bs=1M count=8192")
-            os.system("chmod 600 /swapfile")
-            os.system("mkswap /swapfile")
-            os.system("swapon /swapfile")
-            print("✅ Swap file active.")
     n = _get_nodes()
-    print("⏳ Loading FLUX.2-klein 9B GGUF...")
+    print("⏳ Loading FLUX.2-klein 9B (Hybrid: FP8 UNET + GGUF CLIP)...")
     with torch.inference_mode():
-        # Load GGUF UNET
-        _unet = n["UnetLoaderGGUF"].load_unet_gguf(
-            unet_name="flux-2-klein-9b-q4_k_m.gguf"
+        # Load Safetensors UNET
+        _unet = n["UNETLoader"].load_unet(
+            unet_name="flux-2-klein-9b-kv-fp8.safetensors",
+            weight_dtype="fp8_e4m3fn_fast"
         )[0]
         
         # Load GGUF CLIP (Single Qwen3 8B, no T5 needed for klein)
