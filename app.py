@@ -554,11 +554,7 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="CheapFakeStudio") as demo:
     gr.Markdown("""
     ---
     <p style="text-align:center; color:#6b7280; font-size:0.85em;">
-    🎭 CheapFakeStudio ·
-    <a class="footer-link" href="https://github.com/Tongyi-MAI/Z-Image">Z-Image</a> ·
-    <a class="footer-link" href="https://github.com/lllyasviel/Fooocus">Fooocus</a> ·
-    <a class="footer-link" href="https://huggingface.co/black-forest-labs/FLUX.2-klein-9b-kv-fp8">FLUX.2</a> ·
-    <a class="footer-link" href="https://huggingface.co/Qwen/Qwen-Image-Edit-2511">Qwen-Image-Edit</a>
+    🎭 CheapFakeStudio — Open-source Multi-Model AI Image Studio
     </p>
     """)
 
