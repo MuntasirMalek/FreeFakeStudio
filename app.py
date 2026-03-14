@@ -447,7 +447,7 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="Z-Fooocus") as demo:
                     inp_btn = gr.Button("🎨 Inpaint", variant="primary", size="lg")
                     with gr.Accordion("⚙️ Advanced", open=False):
                         inp_cfg = gr.Slider(0.5, 10.0, value=1.0, step=0.1, label="CFG")
-                        inp_denoise = gr.Slider(0.1, 1.0, value=1.00, step=0.05, label="Denoise")
+                        inp_denoise = gr.Slider(0.1, 1.0, value=0.85, step=0.05, label="Denoise")
                         inp_seed = gr.Number(value=0, label="Seed (0 = random)", precision=0)
                         inp_neg = gr.Textbox(DEFAULT_NEG, label="Negative Prompt", lines=2)
                     inp_clear = gr.ClearButton([inp_editor, inp_image, inp_mask_preview], value="🗑️ Clear All")

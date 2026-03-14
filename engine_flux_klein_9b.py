@@ -237,7 +237,7 @@ def inpaint(original, mask_combined, prompt, negative, seed, cfg, denoise, steps
     mask_float = np.array(mask_composite).astype(np.float32)[:, :, None] / 255.0
 
     mask_blur = Image.fromarray((mask_float[:, :, 0] * 255).astype(np.uint8))
-    mask_blur = mask_blur.filter(ImageFilter.GaussianBlur(32))
+    mask_blur = mask_blur.filter(ImageFilter.GaussianBlur(8))
     mask_float = np.array(mask_blur).astype(np.float32)[:, :, None] / 255.0
 
     old_region = result.astype(np.float32)
