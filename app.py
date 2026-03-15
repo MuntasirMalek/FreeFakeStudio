@@ -287,9 +287,28 @@ button[aria-label="Pan"], button[aria-label="Move"] {
 .gallery-item { cursor: pointer; }
 """
 
-# JavaScript: override brush max size
+# JavaScript: override brush max size and fix preview
 JS_CUSTOM = """
 <script>
+// Prevent browsers from automatically downloading blob URLs when "Open Image in New Tab" is clicked
+document.addEventListener('contextmenu', function(e) {
+    const img = e.target.closest('img');
+    if (img && img.src && img.src.startsWith('blob:')) {
+        // Find if this image is wrapped in an anchor that we can hijack
+        const a = img.closest('a');
+        if (a) {
+            a.onclick = function(ev) {
+                if (ev.ctrlKey || ev.metaKey || ev.button === 1) { // Middle click or Ctrl/Cmd click
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                    fetch(img.src).then(r => r.blob()).then(blob => {
+                        window.open(URL.createObjectURL(blob), '_blank');
+                    });
+                }
+            };
+        }
+    }
+}, true);
 
 // Override brush/eraser size slider max from default ~100 to 300
 function boostBrushMax() {

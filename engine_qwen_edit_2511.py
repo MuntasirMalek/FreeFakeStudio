@@ -258,7 +258,19 @@ def inpaint(original, mask_combined, prompt, negative, seed, cfg, denoise, steps
     # [H, W] mask -> [1, 1, H, W]
     mask_tensor = torch.from_numpy(mask_resized.astype(np.float32) / 255.0).unsqueeze(0).unsqueeze(0)
 
-    # 1) Qwen-Image-Edit needs the raw pristine image for conditioning.
+    # 1) Modulo 8 precision cropping (ComfyUI InpaintModelConditioning)
+    # The VAE compresses exactly 8x8 pixels into 1 latent unit. 
+    # If the image dimensions aren't perfectly divisible by 8, the latent padding 
+    # will permanently desynchronize the spatial alignment of the mask!
+    x = (pixels.shape[1] // 8) * 8
+    y = (pixels.shape[2] // 8) * 8
+    if pixels.shape[1] != x or pixels.shape[2] != y:
+        x_offset = (pixels.shape[1] % 8) // 2
+        y_offset = (pixels.shape[2] % 8) // 2
+        pixels = pixels[:, x_offset:x + x_offset, y_offset:y + y_offset, :]
+        mask_tensor = mask_tensor[:, :, x_offset:x + x_offset, y_offset:y + y_offset]
+
+    # 2) Qwen-Image-Edit needs the raw pristine image for conditioning.
     # It does NOT use an erased hole-punch like traditional SDXL Inpaint models!
     latent_raw = _vae_encode(pixels)
     
@@ -267,7 +279,7 @@ def inpaint(original, mask_combined, prompt, negative, seed, cfg, denoise, steps
     # 2) We pass the precise spatial mask to `concat_mask` so the Instruct UNet 
     # knows exactly which object to modify visually.
     import torch.nn.functional as F
-    latent_mask = F.interpolate(mask_tensor, size=(cond_latent.shape[2], cond_latent.shape[3]), mode='nearest')
+    latent_mask = F.interpolate(mask_tensor, size=(cond_latent.shape[2], cond_latent.shape[3]), mode='bilinear')
 
     pos = n["CLIPTextEncode"].encode(_clip, prompt)[0]
     neg = n["CLIPTextEncode"].encode(_clip, negative)[0]
