@@ -287,19 +287,9 @@ button[aria-label="Pan"], button[aria-label="Move"] {
 .gallery-item { cursor: pointer; }
 """
 
-# JavaScript: shift+click gallery to open in new tab + override brush max size
+# JavaScript: override brush max size
 JS_CUSTOM = """
 <script>
-// Shift+click gallery images to open in new tab
-document.addEventListener('click', function(e) {
-    if (!e.shiftKey) return;
-    const img = e.target.closest('.gallery-item img, .preview img, .thumbnails img');
-    if (img && img.src) {
-        e.preventDefault();
-        e.stopPropagation();
-        window.open(img.src, '_blank');
-    }
-}, true);
 
 // Override brush/eraser size slider max from default ~100 to 300
 function boostBrushMax() {
@@ -409,7 +399,7 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="CheapFakeStudio") as demo:
                 with gr.Column(scale=1):
                     gen_gallery = gr.Gallery(label="Results", columns=2, height=520,
                                              object_fit="contain", show_download_button=True,
-                                             show_fullscreen_button=True)
+                                             show_fullscreen_button=True, preview=True)
                     gen_dl = gr.File(label="Download All", file_count="multiple")
                     gen_seed_out = gr.Textbox(label="Seed Used", interactive=False, show_copy_button=True)
 
@@ -442,7 +432,7 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="CheapFakeStudio") as demo:
                 with gr.Column(scale=1):
                     i2i_gallery = gr.Gallery(label="Results", columns=2, height=520,
                                               object_fit="contain", show_download_button=True,
-                                              show_fullscreen_button=True)
+                                              show_fullscreen_button=True, preview=True)
                     i2i_dl = gr.File(label="Download All", file_count="multiple")
                     i2i_seed_out = gr.Textbox(label="Seed Used", interactive=False, show_copy_button=True)
 
@@ -492,7 +482,7 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="CheapFakeStudio") as demo:
                 with gr.Column(scale=1):
                     inp_gallery = gr.Gallery(label="Results", columns=2, height=520,
                                               object_fit="contain", show_download_button=True,
-                                              show_fullscreen_button=True)
+                                              show_fullscreen_button=True, preview=True)
                     inp_send_btn = gr.Button("🖌️ Send to Paint Editor for Touch-up", variant="secondary")
                     inp_dl = gr.File(label="Download All", file_count="multiple")
                     inp_seed_out = gr.Textbox(label="Seed Used", interactive=False, show_copy_button=True)
@@ -539,6 +529,16 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="CheapFakeStudio") as demo:
                 [inp_model, inp_editor, inp_image, inp_prompt, inp_neg, inp_seed,
                  inp_cfg, inp_denoise, inp_num, inp_mask_mode, inp_auto_mask_state, inp_steps],
                 [inp_gallery, inp_dl, inp_seed_out])
+
+            def optimize_cfg_for_model(model_name):
+                # Instruct/Standard models need higher CFG to magnify text guidance.
+                # Turbo/Flow-matching models (like Flux) need 1.0 CFG.
+                if "Qwen" in getattr(model_name, "value", str(model_name)):
+                    return gr.update(value=5.0)
+                return gr.update(value=1.0)
+                
+            i2i_model.change(optimize_cfg_for_model, inputs=[i2i_model], outputs=[i2i_cfg])
+            inp_model.change(optimize_cfg_for_model, inputs=[inp_model], outputs=[inp_cfg])
 
     gr.Markdown("""
     ---
