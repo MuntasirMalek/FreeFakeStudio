@@ -289,6 +289,10 @@ def inpaint(original, mask_combined, prompt, negative, seed, cfg, denoise, steps
     # receives 0 noise and remains mathematically identical.
     latent = n["SetLatentNoiseMask"].set_mask(latent_raw, mask_tensor.unsqueeze(0))[0]
 
+    # Force 1.0 denoise for the mask. Since the conditioning hole is now physically 
+    # 0.5 erased, Qwen will properly fill the 100% noise void without hallucinating.
+    denoise = 1.0
+
     samples = n["KSampler"].sample(
         _unet, seed, int(steps), float(cfg),
         "euler", "simple", pos, neg, latent, denoise=float(denoise)
