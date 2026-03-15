@@ -255,26 +255,38 @@ def inpaint(original, mask_combined, prompt, negative, seed, cfg, denoise, steps
     mask_resized = np.array(mask_pil)
 
     pixels = _pil_to_tensor(crop_pil)
-    mask_tensor = torch.from_numpy(mask_resized.astype(np.float32) / 255.0) # [H, W]
+    # [H, W] mask -> [1, 1, H, W]
+    mask_tensor = torch.from_numpy(mask_resized.astype(np.float32) / 255.0).unsqueeze(0).unsqueeze(0)
 
-    # 1) Replicate standard ComfyUI InpaintModelConditioning:
-    # We must physically erase the masked pixels (set to 0.5 mid-gray) BEFORE 
-    # encoding them, so Qwen's condition UNet clearly sees the "hole" to fill.
-    m = (1.0 - mask_tensor.round()).unsqueeze(0).unsqueeze(-1) # [1, H, W, 1]
-    pixels_masked = pixels.clone() - 0.5
-    pixels_masked = pixels_masked * m
-    pixels_masked = pixels_masked + 0.5
+    # 1) Exact Math from ComfyUI InpaintModelConditioning & VAEEncodeForInpaint
+    # We must properly scale and blank out the masked region in pixel space before encoding it.
+    
+    # Optional mask erosion to keep latent boundaries seamless (grow_mask_by=6 equivalent)
+    import math
+    grow_mask_by = 6
+    kernel_tensor = torch.ones((1, 1, grow_mask_by, grow_mask_by), device=mask_tensor.device)
+    padding = math.ceil((grow_mask_by - 1) / 2)
+    mask_erosion = torch.clamp(torch.nn.functional.conv2d(mask_tensor.round(), kernel_tensor, padding=padding), 0, 1)
 
-    # 2) Encode the pure image (for the KSampler base) and erased image (for UNet cond)
+    # InpaintModelConditioning: Erase pixels
+    m = (1.0 - mask_tensor.round()).permute(0, 2, 3, 1) # [1, H, W, 1]
+    pixels_masked = pixels.clone()
+    for i in range(3):
+        pixels_masked[:,:,:,i] -= 0.5
+        pixels_masked[:,:,:,i] *= m.squeeze(-1)
+        pixels_masked[:,:,:,i] += 0.5
+
+    # 2) VAE Encode 
+    # latent_raw: The base latent for the KSampler noise trajectory
+    # latent_cond: The blanked-out latent for the UNet instruction reference
     latent_raw = _vae_encode(pixels)
     latent_cond = _vae_encode(pixels_masked)
     
     cond_latent = latent_cond["samples"].clone()
 
-    # 3) Create the concat_mask (1 for inpaint, 0 for keep)
-    mask_tensor_bchw = mask_tensor.unsqueeze(0).unsqueeze(0)
+    # The condition mask expected by UNet
     import torch.nn.functional as F
-    latent_mask = F.interpolate(mask_tensor_bchw, size=(cond_latent.shape[2], cond_latent.shape[3]), mode='nearest')
+    latent_mask = F.interpolate(mask_tensor, size=(cond_latent.shape[2], cond_latent.shape[3]), mode='nearest')
 
     pos = n["CLIPTextEncode"].encode(_clip, prompt)[0]
     neg = n["CLIPTextEncode"].encode(_clip, negative)[0]
