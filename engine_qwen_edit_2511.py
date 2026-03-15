@@ -279,11 +279,10 @@ def inpaint(original, mask_combined, prompt, negative, seed, cfg, denoise, steps
     pos[0][1].update(cond_dict)
     neg[0][1].update(cond_dict)
 
-    # Apply SetLatentNoiseMask so the unmasked area is perfectly preserved.
-    latent = n["SetLatentNoiseMask"].set_mask(latent_raw, mask_tensor.squeeze(0))[0]
-
-    # Force denoise to 1.0 for 100% noise over the mask. 
-    denoise = 1.0
+    # Qwen-Image-Edit requires smooth global noise. We bypass SetLatentNoiseMask 
+    # to avoid creating a mathematically discontinuous hole that destroys its attention. 
+    # We generate a full-image edit, and composite the mask area below in pixel space.
+    latent = latent_raw
 
     samples = n["KSampler"].sample(
         _unet, seed, int(steps), float(cfg),
