@@ -208,7 +208,7 @@ def img2img(input_image, prompt, negative, seed, cfg, denoise, steps=40):
 
     samples = n["KSampler"].sample(
         _unet, seed, int(steps), float(cfg),
-        "euler", "simple", pos, neg, latent, denoise=float(denoise)
+        "euler", "simple", pos, neg, latent, denoise=1.0
     )[0]
     decoded = _vae_decode(samples).detach()
     return Image.fromarray(np.array(decoded * 255, dtype=np.uint8)[0])
@@ -258,33 +258,14 @@ def inpaint(original, mask_combined, prompt, negative, seed, cfg, denoise, steps
     # [H, W] mask -> [1, 1, H, W]
     mask_tensor = torch.from_numpy(mask_resized.astype(np.float32) / 255.0).unsqueeze(0).unsqueeze(0)
 
-    # 1) Exact Math from ComfyUI InpaintModelConditioning & VAEEncodeForInpaint
-    # We must properly scale and blank out the masked region in pixel space before encoding it.
-    
-    # Optional mask erosion to keep latent boundaries seamless (grow_mask_by=6 equivalent)
-    import math
-    grow_mask_by = 6
-    kernel_tensor = torch.ones((1, 1, grow_mask_by, grow_mask_by), device=mask_tensor.device)
-    padding = math.ceil((grow_mask_by - 1) / 2)
-    mask_erosion = torch.clamp(torch.nn.functional.conv2d(mask_tensor.round(), kernel_tensor, padding=padding), 0, 1)
-
-    # InpaintModelConditioning: Erase pixels
-    m = (1.0 - mask_tensor.round()).permute(0, 2, 3, 1) # [1, H, W, 1]
-    pixels_masked = pixels.clone()
-    for i in range(3):
-        pixels_masked[:,:,:,i] -= 0.5
-        pixels_masked[:,:,:,i] *= m.squeeze(-1)
-        pixels_masked[:,:,:,i] += 0.5
-
-    # 2) VAE Encode 
-    # latent_raw: The base latent for the KSampler noise trajectory
-    # latent_cond: The blanked-out latent for the UNet instruction reference
+    # 1) Qwen-Image-Edit needs the raw pristine image for conditioning.
+    # It does NOT use an erased hole-punch like traditional SDXL Inpaint models!
     latent_raw = _vae_encode(pixels)
-    latent_cond = _vae_encode(pixels_masked)
     
-    cond_latent = latent_cond["samples"].clone()
+    cond_latent = latent_raw["samples"].clone()
 
-    # The condition mask expected by UNet
+    # 2) We pass the precise spatial mask to `concat_mask` so the Instruct UNet 
+    # knows exactly which object to modify visually.
     import torch.nn.functional as F
     latent_mask = F.interpolate(mask_tensor, size=(cond_latent.shape[2], cond_latent.shape[3]), mode='nearest')
 
@@ -297,17 +278,19 @@ def inpaint(original, mask_combined, prompt, negative, seed, cfg, denoise, steps
     pos[0][1].update(cond_dict)
     neg[0][1].update(cond_dict)
 
-    # 4) We MUST use SetLatentNoiseMask! This guarantees the unmasked background 
-    # receives 0 noise and remains mathematically identical.
-    latent = n["SetLatentNoiseMask"].set_mask(latent_raw, mask_tensor.unsqueeze(0))[0]
-
-    # Force 1.0 denoise for the mask. Since the conditioning hole is now physically 
-    # 0.5 erased, Qwen will properly fill the 100% noise void without hallucinating.
+    # 3) We CANNOT use SetLatentNoiseMask! If we do, the unmasked area stays at 0 noise, 
+    # creating a mathematically sharp discontinuous noise hole that blinds Qwen's attention.
+    # We must use smooth, global noise and rely purely on our post-process 
+    # pixel-space alpha blend to protect exactly the background.
+    latent = latent_raw
+    
+    # 4) ALWAYS force denoise = 1.0. Instruct models will produce blurry smears 
+    # if their diffusion trajectory is interrupted midway (like 0.75 denoise).
     denoise = 1.0
 
     samples = n["KSampler"].sample(
         _unet, seed, int(steps), float(cfg),
-        "euler", "simple", pos, neg, latent, denoise=float(denoise)
+        "euler", "simple", pos, neg, latent, denoise=1.0
     )[0]
 
     decoded = _vae_decode(samples).detach()
