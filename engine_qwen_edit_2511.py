@@ -181,9 +181,6 @@ def img2img(input_image, prompt, negative, seed, cfg, denoise, steps=40):
     Instruction-based image editing via Qwen-Image-Edit.
     The model takes an input image + prompt instruction and edits accordingly.
     """
-    # Force minimum steps. Qwen-Image-Edit produces noise if steps are too low (e.g. 8).
-    steps = max(int(steps), 25)
-
     n = _get_nodes()
     input_image = _resize_to_multiple(input_image.convert("RGB"))
     img_tensor = _pil_to_tensor(input_image)
@@ -248,9 +245,6 @@ def _fooocus_fill(image_np, mask_np):
 @torch.inference_mode()
 def inpaint(original, mask_combined, prompt, negative, seed, cfg, denoise, steps=40):
     """Mask-based inpaint using Qwen-Image-Edit GGUF."""
-    # Force minimum steps. Qwen-Image-Edit produces noise if steps are too low (e.g. 8).
-    steps = max(int(steps), 25)
-
     n = _get_nodes()
 
     # Pass the full image to maintain aspect ratio and body context
@@ -283,14 +277,10 @@ def inpaint(original, mask_combined, prompt, negative, seed, cfg, denoise, steps
     pos[0][1].update(cond_dict)
     neg[0][1].update(cond_dict)
 
-    # Qwen-Image-Edit is trained on uniform global noise for instruction editing.
-    # We DO NOT use SetLatentNoiseMask, as discontinuous noise destroys its global
-    # attention, causing it to hallucinate entire new subjects inside the mask boundary.
-    latent = latent_raw
+    # Apply SetLatentNoiseMask so the unmasked area is perfectly preserved.
+    latent = n["SetLatentNoiseMask"].set_mask(latent_raw, mask_tensor.squeeze(0))[0]
 
-    # Force denoise to 1.0 for 100% noise globally. The `concat_mask` tells the UNet
-    # to only apply the prompt instruction to the masked region, while reconstructing 
-    # the unmasked background identically from `concat_latent_image`.
+    # Force denoise to 1.0 for 100% noise over the mask. 
     denoise = 1.0
 
     samples = n["KSampler"].sample(
