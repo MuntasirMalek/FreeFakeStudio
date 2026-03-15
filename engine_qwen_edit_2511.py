@@ -253,21 +253,11 @@ def inpaint(original, mask_combined, prompt, negative, seed, cfg, denoise, steps
 
     n = _get_nodes()
 
-    crop = _compute_crop_region(mask_combined)
-    if crop is None:
-        raise ValueError("No mask detected.")
-    a, b, c, d = crop
-
-    # Crop the image and mask to the active region
-    cropped_img = np.array(original)[a:b, c:d]
-    cropped_mask = mask_combined[a:b, c:d]
-
-    # Resize to multiples of 64
-    crop_pil = Image.fromarray(cropped_img)
-    crop_pil = _resize_to_multiple(crop_pil, multiple=64, max_dim=1024)
+    # Pass the full image to maintain aspect ratio and body context
+    crop_pil = _resize_to_multiple(original, multiple=64, max_dim=1024)
     cw, ch = crop_pil.size
 
-    mask_pil = Image.fromarray(cropped_mask).resize((cw, ch), Image.NEAREST)
+    mask_pil = Image.fromarray(mask_combined).resize((cw, ch), Image.NEAREST)
     mask_resized = np.array(mask_pil)
 
     # Qwen-Image-Edit handles inpainting natively via its concat conditions.
@@ -297,28 +287,32 @@ def inpaint(original, mask_combined, prompt, negative, seed, cfg, denoise, steps
     # under denoise. mask_tensor is [1, 1, H, W], set_mask expects [B, H, W].
     latent = n["SetLatentNoiseMask"].set_mask(latent_raw, mask_tensor.squeeze(0))[0]
 
+    # Force denoise to 1.0! Instruction models need 100% noise in the mask to 
+    # cleanly replace the object. 0.75 denoise retains 25% of the original red dress,
+    # causing messy artifacts/colors. The mask protects the background anyway.
+    denoise = 1.0
+
     samples = n["KSampler"].sample(
         _unet, seed, int(steps), float(cfg),
         "euler", "simple", pos, neg, latent, denoise=float(denoise)
     )[0]
 
     decoded = _vae_decode(samples).detach()
-    result_crop = np.array(decoded * 255, dtype=np.uint8)[0]
-    result_crop_pil = Image.fromarray(result_crop).resize((d - c, b - a), Image.LANCZOS)
+    result_np = np.array(decoded * 255, dtype=np.uint8)[0]
+    result_pil = Image.fromarray(result_np).resize(original.size, Image.LANCZOS)
 
-    # Composite back
+    # Composite back using full image bounds
     result = np.array(original).copy()
-    result_crop_np = np.array(result_crop_pil)
-    mask_composite = Image.fromarray(cropped_mask).resize((d - c, b - a), Image.LANCZOS)
+    mask_composite = Image.fromarray(mask_combined)
     mask_float = np.array(mask_composite).astype(np.float32)[:, :, None] / 255.0
 
     mask_blur = Image.fromarray((mask_float[:, :, 0] * 255).astype(np.uint8))
     mask_blur = mask_blur.filter(ImageFilter.GaussianBlur(3))
     mask_float = np.array(mask_blur).astype(np.float32)[:, :, None] / 255.0
 
-    old_region = result[a:b, c:d].astype(np.float32)
-    new_region = result_crop_np.astype(np.float32)
+    old_region = result.astype(np.float32)
+    new_region = np.array(result_pil).astype(np.float32)
     blended = new_region * mask_float + old_region * (1 - mask_float)
-    result[a:b, c:d] = blended.clip(0, 255).astype(np.uint8)
+    result = blended.clip(0, 255).astype(np.uint8)
 
     return Image.fromarray(result)
