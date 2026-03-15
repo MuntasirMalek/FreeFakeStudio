@@ -283,13 +283,14 @@ def inpaint(original, mask_combined, prompt, negative, seed, cfg, denoise, steps
     pos[0][1].update(cond_dict)
     neg[0][1].update(cond_dict)
 
-    # Apply SetLatentNoiseMask so that unmasked regions are perfectly preserved
-    # under denoise. mask_tensor is [1, 1, H, W], set_mask expects [B, H, W].
-    latent = n["SetLatentNoiseMask"].set_mask(latent_raw, mask_tensor.squeeze(0))[0]
+    # Qwen-Image-Edit is trained on uniform global noise for instruction editing.
+    # We DO NOT use SetLatentNoiseMask, as discontinuous noise destroys its global
+    # attention, causing it to hallucinate entire new subjects inside the mask boundary.
+    latent = latent_raw
 
-    # Force denoise to 1.0! Instruction models need 100% noise in the mask to 
-    # cleanly replace the object. 0.75 denoise retains 25% of the original red dress,
-    # causing messy artifacts/colors. The mask protects the background anyway.
+    # Force denoise to 1.0 for 100% noise globally. The `concat_mask` tells the UNet
+    # to only apply the prompt instruction to the masked region, while reconstructing 
+    # the unmasked background identically from `concat_latent_image`.
     denoise = 1.0
 
     samples = n["KSampler"].sample(
