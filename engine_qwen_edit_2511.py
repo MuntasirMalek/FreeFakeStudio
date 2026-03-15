@@ -254,21 +254,27 @@ def inpaint(original, mask_combined, prompt, negative, seed, cfg, denoise, steps
     mask_pil = Image.fromarray(mask_combined).resize((cw, ch), Image.NEAREST)
     mask_resized = np.array(mask_pil)
 
-    # Qwen-Image-Edit handles inpainting natively via its concat conditions.
-    # It does NOT need a pre-blurred "Fooocus" fill background. The pristine 
-    # image latent is what it edits based on the mask.
-    latent_raw = _vae_encode(_pil_to_tensor(crop_pil))
-    
-    # Qwen-Image-Edit needs 64 channels (input image condition concatenated).
-    cond_latent = latent_raw["samples"].clone()
+    pixels = _pil_to_tensor(crop_pil)
+    mask_tensor = torch.from_numpy(mask_resized.astype(np.float32) / 255.0) # [H, W]
 
-    # Create the tensor mask downscaled for latents ([B,C,H,W])
-    mask_tensor = torch.from_numpy(mask_resized.astype(np.float32) / 255.0).unsqueeze(0).unsqueeze(0)
+    # 1) Replicate standard ComfyUI InpaintModelConditioning:
+    # We must physically erase the masked pixels (set to 0.5 mid-gray) BEFORE 
+    # encoding them, so Qwen's condition UNet clearly sees the "hole" to fill.
+    m = (1.0 - mask_tensor.round()).unsqueeze(0).unsqueeze(-1) # [1, H, W, 1]
+    pixels_masked = pixels.clone() - 0.5
+    pixels_masked = pixels_masked * m
+    pixels_masked = pixels_masked + 0.5
+
+    # 2) Encode the pure image (for the KSampler base) and erased image (for UNet cond)
+    latent_raw = _vae_encode(pixels)
+    latent_cond = _vae_encode(pixels_masked)
     
-    # In img2img, the concat_mask is just 1s. For instruction-based inpainting, 
-    # we use the same 1s mask to tell Qwen to "look" everywhere, and we rely entirely 
-    # on the KSampler's `SetLatentNoiseMask` to restrict where the pixels actually change.
-    latent_mask = torch.ones((1, 1, cond_latent.shape[2], cond_latent.shape[3]), device=cond_latent.device)
+    cond_latent = latent_cond["samples"].clone()
+
+    # 3) Create the concat_mask (1 for inpaint, 0 for keep)
+    mask_tensor_bchw = mask_tensor.unsqueeze(0).unsqueeze(0)
+    import torch.nn.functional as F
+    latent_mask = F.interpolate(mask_tensor_bchw, size=(cond_latent.shape[2], cond_latent.shape[3]), mode='nearest')
 
     pos = n["CLIPTextEncode"].encode(_clip, prompt)[0]
     neg = n["CLIPTextEncode"].encode(_clip, negative)[0]
@@ -279,10 +285,9 @@ def inpaint(original, mask_combined, prompt, negative, seed, cfg, denoise, steps
     pos[0][1].update(cond_dict)
     neg[0][1].update(cond_dict)
 
-    # Qwen-Image-Edit requires smooth global noise. We bypass SetLatentNoiseMask 
-    # to avoid creating a mathematically discontinuous hole that destroys its attention. 
-    # We generate a full-image edit, and composite the mask area below in pixel space.
-    latent = latent_raw
+    # 4) We MUST use SetLatentNoiseMask! This guarantees the unmasked background 
+    # receives 0 noise and remains mathematically identical.
+    latent = n["SetLatentNoiseMask"].set_mask(latent_raw, mask_tensor.unsqueeze(0))[0]
 
     samples = n["KSampler"].sample(
         _unet, seed, int(steps), float(cfg),
