@@ -264,9 +264,11 @@ def inpaint(original, mask_combined, prompt, negative, seed, cfg, denoise, steps
 
     # Create the tensor mask downscaled for latents ([B,C,H,W])
     mask_tensor = torch.from_numpy(mask_resized.astype(np.float32) / 255.0).unsqueeze(0).unsqueeze(0)
-    # Resize mask to match latent dimensions (1/8th of image)
-    import torch.nn.functional as F
-    latent_mask = F.interpolate(mask_tensor, size=(cond_latent.shape[2], cond_latent.shape[3]), mode='nearest')
+    
+    # In img2img, the concat_mask is just 1s. For instruction-based inpainting, 
+    # we use the same 1s mask to tell Qwen to "look" everywhere, and we rely entirely 
+    # on the KSampler's `SetLatentNoiseMask` to restrict where the pixels actually change.
+    latent_mask = torch.ones((1, 1, cond_latent.shape[2], cond_latent.shape[3]), device=cond_latent.device)
 
     pos = n["CLIPTextEncode"].encode(_clip, prompt)[0]
     neg = n["CLIPTextEncode"].encode(_clip, negative)[0]
