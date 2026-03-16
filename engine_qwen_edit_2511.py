@@ -168,10 +168,8 @@ def _vae_encode(image_tensor):
         latent = _vae.encode(x).latent_dist.mode()
     # Squeeze temporal dim: [B, C, 1, H, W] → [B, C, H, W]
     latent = latent.squeeze(2)
-    # Normalize to zero-mean unit-variance space expected by the UNet
-    latents_mean = torch.tensor(_vae.config.latents_mean).view(1, -1, 1, 1).to(latent)
-    latents_std = torch.tensor(_vae.config.latents_std).view(1, -1, 1, 1).to(latent)
-    latent = (latent - latents_mean) / latents_std
+    # NOTE: Do NOT apply latents_mean/latents_std here — ComfyUI's KSampler
+    # handles that automatically via the model's latent_format (Wan21).
     return {"samples": latent.float().cpu()}
 
 def _vae_decode(latent_dict):
@@ -180,10 +178,8 @@ def _vae_decode(latent_dict):
     latent = latent_dict["samples"].to(_vae.device, dtype=_vae.dtype)
     if latent.ndim == 4:
         latent = latent.unsqueeze(2)  # add temporal dim: [B,C,H,W] → [B,C,1,H,W]
-    # Denormalize from UNet's normalized space back to raw VAE latent space
-    latents_mean = torch.tensor(_vae.config.latents_mean).view(1, -1, 1, 1, 1).to(latent)
-    latents_std = torch.tensor(_vae.config.latents_std).view(1, -1, 1, 1, 1).to(latent)
-    latent = latent * latents_std + latents_mean
+    # NOTE: Do NOT apply latents_mean/latents_std here — ComfyUI's KSampler
+    # already denormalizes via the model's latent_format (Wan21) process_out.
     with torch.no_grad():
         decoded = _vae.decode(latent).sample
     # The output image from decode is 5D [B, C, T, H, W]. We squeeze T=1.
