@@ -262,12 +262,15 @@ CSS = """
     font-family: 'Inter', -apple-system, sans-serif !important;
     max-width: 1400px !important;
 }
-.main-title { text-align:center; font-size:2.8em; font-weight:800; margin:10px 0 0 0; }
+.main-title {
+    display:inline-block; font-size:1.3em; font-weight:800; margin:0; padding:4px 0;
+}
 .main-title span {
     background: linear-gradient(135deg, #60a5fa, #a78bfa);
     -webkit-background-clip: text; -webkit-text-fill-color: transparent;
 }
 .subtitle { text-align:center; color:#9ca3af; margin-bottom:15px; font-size:1.05em; }
+.compact-header { margin:0 0 2px 0; padding:0 8px; }
 .footer-link { color:#60a5fa !important; text-decoration:none; }
 
 /* Prevent scrollbars from interrupting brush strokes in ImageEditor */
@@ -385,11 +388,7 @@ def preview_auto_mask(image, mask_mode):
 # ── Build UI ───────────────────────────────────────────────
 with gr.Blocks(theme=zfooocus_theme, css=CSS, title="CheapFakeStudio") as demo:
 
-    gr.HTML("""
-    <div>
-        <h1 class="main-title">🎭 <span>CheapFakeStudio</span></h1>
-    </div>
-    """)
+    gr.HTML("""<div class="compact-header"><h1 class="main-title">🎭 <span>CheapFakeStudio</span></h1></div>""")
     gr.HTML(JS_CUSTOM)
 
     with gr.Tabs():

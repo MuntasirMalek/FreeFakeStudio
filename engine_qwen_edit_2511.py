@@ -12,8 +12,7 @@ from PIL import Image, ImageFilter
 _loaded = False
 _unet = None
 _clip = None
-_vae = None
-_vae_diffusers = None   # diffusers VAE for encode/decode
+_vae_diffusers = None
 _nodes = {}
 
 # ── Node references (ComfyUI + ComfyUI-GGUF) ──────────────
@@ -25,58 +24,55 @@ def _get_nodes():
             sys.path.insert(0, "/content/ComfyUI")
         from nodes import NODE_CLASS_MAPPINGS
 
-        # Import ComfyUI-GGUF nodes
         try:
             import importlib
             gguf_module = importlib.import_module("custom_nodes.ComfyUI-GGUF.nodes")
             gguf_mappings = gguf_module.NODE_CLASS_MAPPINGS if hasattr(gguf_module, 'NODE_CLASS_MAPPINGS') else {}
         except Exception:
-            # Try alternate import path
             try:
                 from custom_nodes import ComfyUI_GGUF
                 gguf_mappings = ComfyUI_GGUF.NODE_CLASS_MAPPINGS
             except Exception:
                 gguf_mappings = {}
 
-        # Merge GGUF nodes into standard nodes
         all_nodes = {**NODE_CLASS_MAPPINGS, **gguf_mappings}
 
         _nodes = {
             "UnetLoaderGGUF":   all_nodes.get("UnetLoaderGGUF", all_nodes.get("UNETLoader"))(),
             "CLIPLoaderGGUF":   all_nodes.get("CLIPLoaderGGUF", all_nodes.get("CLIPLoader"))(),
-            "VAELoader":        all_nodes["VAELoader"](),
+            "CLIPTextEncode":   all_nodes["CLIPTextEncode"](),
             "KSampler":         all_nodes["KSampler"](),
         }
     return _nodes
 
 # ── Load / Unload ──────────────────────────────────────────
 def load():
-    global _loaded, _unet, _clip, _vae, _vae_diffusers
+    global _loaded, _unet, _clip, _vae_diffusers
     if _loaded:
         return
     n = _get_nodes()
     print("⏳ Loading Qwen-Image-Edit-2511 Q4_K_M GGUF...")
     with torch.inference_mode():
-        # Load GGUF diffusion model
         _unet = n["UnetLoaderGGUF"].load_unet(
             "qwen-image-edit-2511-Q4_0.gguf"
         )[0]
-        # Load GGUF text encoder (Qwen2.5-VL)
         _clip = n["CLIPLoaderGGUF"].load_clip(
             "Qwen2.5-VL-7B-Instruct-Q2_K.gguf",
             type="qwen2vl"
         )[0]
 
-        # Load VAE via ComfyUI native loader (for reference_latents encoding)
-        vae_path = "qwen_image_vae.safetensors"
+        # Diagnostic: check what latent format the model uses
         try:
-            _vae = n["VAELoader"].load_vae(vae_path)[0]
-            print("  ✅ Qwen VAE loaded via ComfyUI")
+            lf = _unet.model.latent_format
+            print(f"  📊 Model latent_format: {type(lf).__name__}")
+            if hasattr(lf, 'latents_mean'):
+                print(f"  📊 Has latents_mean/std normalization: YES")
+            else:
+                print(f"  📊 Has latents_mean/std normalization: NO (scale_factor={lf.scale_factor})")
         except Exception as e:
-            print(f"  ⚠️ ComfyUI VAE load failed ({e}), falling back to diffusers...")
-            _vae = None
+            print(f"  📊 Could not inspect latent format: {e}")
 
-        # Fallback: load VAE via diffusers for encode/decode
+        # Load VAE via diffusers
         from diffusers import AutoencoderKLQwenImage
         import comfy.model_management as mm
 
@@ -133,10 +129,9 @@ def load():
     print("✅ Qwen-Image-Edit loaded!")
 
 def unload():
-    global _loaded, _unet, _clip, _vae, _vae_diffusers
+    global _loaded, _unet, _clip, _vae_diffusers
     _unet = None
     _clip = None
-    _vae = None
     _vae_diffusers = None
     _loaded = False
     gc.collect()
@@ -158,26 +153,14 @@ def _resize_to_multiple(img, multiple=8, max_dim=1024):
     new_h = max(multiple, round(h * scale / multiple) * multiple)
     return img.resize((new_w, new_h), Image.LANCZOS)
 
-def _vae_encode_comfyui(image_tensor):
-    """Encode using ComfyUI's native VAE (returns 5D latent)."""
-    # image_tensor: [B, H, W, C] 0-1 (ComfyUI format)
-    return _vae.encode(image_tensor[:, :, :, :3])
-
-def _vae_encode_diffusers(image_tensor):
-    """Encode using diffusers VAE → 5D latent [B, C, 1, H, W]."""
+def _vae_encode(image_tensor):
+    """Encode image [B,H,W,C] 0-1 → 5D latent [B,C,1,H/8,W/8]."""
     x = image_tensor.permute(0, 3, 1, 2).to(_vae_diffusers.device, dtype=_vae_diffusers.dtype)
     x = x * 2.0 - 1.0
-    x = x.unsqueeze(2)  # [B, C, H, W] → [B, C, 1, H, W]
+    x = x.unsqueeze(2)  # [B,C,H,W] → [B,C,1,H,W]
     with torch.no_grad():
         latent = _vae_diffusers.encode(x).latent_dist.mode()
-    # Keep 5D shape! Do NOT squeeze temporal dim.
     return latent.float().cpu()
-
-def _vae_encode(image_tensor):
-    """Encode image tensor → 5D latent dict for KSampler."""
-    if _vae is not None:
-        return _vae_encode_comfyui(image_tensor)
-    return {"samples": _vae_encode_diffusers(image_tensor)}
 
 def _vae_decode(latent_dict):
     """Decode latent dict → image tensor [B,H,W,C] 0-1."""
@@ -192,53 +175,30 @@ def _vae_decode(latent_dict):
     decoded = decoded.clamp(0, 1)
     return decoded.permute(0, 2, 3, 1).float().cpu()
 
-def _prepare_image_for_clip(img_pil):
-    """Resize image for CLIP vision input (area ~1024×1024)."""
-    img = img_pil.convert("RGB")
-    w, h = img.size
-    total = 1024 * 1024
-    scale = math.sqrt(total / (w * h))
-    nw, nh = round(w * scale), round(h * scale)
-    img = img.resize((nw, nh), Image.LANCZOS)
-    return _pil_to_tensor(img)
-
-def _encode_prompt(prompt, source_image_pil=None, ref_latent=None, negative=False):
-    """
-    Encode prompt using Qwen's vision-language CLIP.
-    Passes the source image both to the VL tokenizer and as a VAE reference latent.
-    """
-    import node_helpers
-
-    if source_image_pil is not None and not negative:
-        clip_image = _prepare_image_for_clip(source_image_pil)
-        tokens = _clip.tokenize(prompt, images=[clip_image[:, :, :, :3]])
-    else:
-        tokens = _clip.tokenize(prompt)
-
-    cond = _clip.encode_from_tokens_scheduled(tokens)
-
-    if ref_latent is not None and not negative:
-        cond = node_helpers.conditioning_set_values(
-            cond, {"reference_latents": [ref_latent]}, append=True
-        )
-
-    return cond
-
 # ── Img2Img (instruction-based editing) ───────────────────
 @torch.inference_mode()
 def img2img(input_image, prompt, negative, seed, cfg, denoise, steps=40):
     """Instruction-based image editing via Qwen-Image-Edit."""
     n = _get_nodes()
+    import node_helpers
+
     input_image = _resize_to_multiple(input_image.convert("RGB"))
     img_tensor = _pil_to_tensor(input_image)
 
-    # VAE encode for reference latent (5D) and starting latent
-    ref_latent = _vae_encode_diffusers(img_tensor)
+    # VAE encode source image → 5D latent
+    ref_latent = _vae_encode(img_tensor)
     latent = {"samples": ref_latent.clone()}
 
-    # Encode prompt with vision conditioning
-    pos = _encode_prompt(prompt, source_image_pil=input_image, ref_latent=ref_latent)
-    neg = _encode_prompt(negative, negative=True)
+    # Text-only CLIP encoding (avoids issues with GGUF VL image processing)
+    pos = n["CLIPTextEncode"].encode(_clip, prompt)[0]
+    neg = n["CLIPTextEncode"].encode(_clip, negative)[0]
+
+    # Attach source image as reference_latents (proper QwenImage conditioning)
+    pos = node_helpers.conditioning_set_values(
+        pos, {"reference_latents": [ref_latent]}, append=True
+    )
+
+    print(f"  📊 img2img latent shape: {ref_latent.shape}, denoise: {denoise}")
 
     samples = n["KSampler"].sample(
         _unet, seed, int(steps), float(cfg),
@@ -247,7 +207,7 @@ def img2img(input_image, prompt, negative, seed, cfg, denoise, steps=40):
     decoded = _vae_decode(samples).detach()
     return Image.fromarray(np.array(decoded * 255, dtype=np.uint8)[0])
 
-# ── Inpaint (Fooocus-style mask-based) ────────────────────
+# ── Inpaint ───────────────────────────────────────────────
 def _compute_crop_region(mask_np, padding=0.30):
     indices = np.where(mask_np > 0)
     if len(indices[0]) == 0 or len(indices[1]) == 0:
@@ -280,6 +240,7 @@ def _fooocus_fill(image_np, mask_np):
 def inpaint(original, mask_combined, prompt, negative, seed, cfg, denoise, steps=40):
     """Mask-based inpaint using Qwen-Image-Edit GGUF."""
     n = _get_nodes()
+    import node_helpers, comfy.model_management as mm
 
     crop_pil = _resize_to_multiple(original, multiple=8, max_dim=1024)
     cw, ch = crop_pil.size
@@ -290,20 +251,25 @@ def inpaint(original, mask_combined, prompt, negative, seed, cfg, denoise, steps
     img_tensor = _pil_to_tensor(crop_pil)
 
     # VAE encode source image → 5D reference latent
-    ref_latent = _vae_encode_diffusers(img_tensor)
+    ref_latent = _vae_encode(img_tensor)
 
-    # For inpaint with denoise=1.0, start from empty latent (pure noise)
+    # Start from empty 5D latent (denoise=1.0 means full generation)
     h_lat, w_lat = ref_latent.shape[3], ref_latent.shape[4]
-    import comfy.model_management as mm
     empty_latent = torch.zeros(
         [1, 16, 1, h_lat, w_lat],
         device=mm.intermediate_device()
     )
     latent = {"samples": empty_latent}
 
-    # Encode prompt with vision conditioning + reference latent
-    pos = _encode_prompt(prompt, source_image_pil=crop_pil, ref_latent=ref_latent)
-    neg = _encode_prompt(negative, negative=True)
+    # Text-only CLIP encoding + reference_latents
+    pos = n["CLIPTextEncode"].encode(_clip, prompt)[0]
+    neg = n["CLIPTextEncode"].encode(_clip, negative)[0]
+
+    pos = node_helpers.conditioning_set_values(
+        pos, {"reference_latents": [ref_latent]}, append=True
+    )
+
+    print(f"  📊 inpaint ref_latent: {ref_latent.shape}, start: {empty_latent.shape}")
 
     samples = n["KSampler"].sample(
         _unet, seed, int(steps), float(cfg),
