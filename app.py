@@ -122,15 +122,14 @@ def generate_image(model_name, prompt, negative, aspect_ratio,
     w, h = [int(x) for x in aspect_ratio.split("(")[0].strip().split("x")]
     engine = _ensure_model(model_name)
 
-    images, paths = [], []
+    paths = []
     for i in range(int(num_images)):
         img = engine.generate(prompt, negative, w, h,
                               seed + i, cfg, denoise, int(steps))
         path = get_save_path("gen")
         img.save(path)
-        images.append(img)
         paths.append(path)
-    return images, paths, str(seed)
+    return paths, paths, str(seed)
 
 # ── IMG2IMG ────────────────────────────────────────────────
 def do_img2img(model_name, input_image, prompt, negative,
@@ -140,15 +139,14 @@ def do_img2img(model_name, input_image, prompt, negative,
     seed = make_seed(seed)
     engine = _ensure_model(model_name)
 
-    images, paths = [], []
+    paths = []
     for i in range(int(num_images)):
         img = engine.img2img(input_image, prompt, negative,
                              seed + i, cfg, denoise, int(steps))
         path = get_save_path("i2i")
         img.save(path)
-        images.append(img)
         paths.append(path)
-    return images, paths, str(seed)
+    return paths, paths, str(seed)
 
 # ── INPAINT ────────────────────────────────────────────────
 def do_inpaint(model_name, editor_data, inp_image, prompt, negative,
@@ -238,15 +236,14 @@ def do_inpaint(model_name, editor_data, inp_image, prompt, negative,
         else:
             raise gr.Error("Unknown mask mode.")
 
-    images, paths = [], []
+    paths = []
     for i in range(int(num_images)):
         img = engine.inpaint(original, mask_combined, prompt, negative,
                              seed + i, cfg, denoise, int(steps))
         path = get_save_path("inpaint")
         img.save(path)
-        images.append(img)
         paths.append(path)
-    return images, paths, str(seed)
+    return paths, paths, str(seed)
 
 
 # =====================================================================

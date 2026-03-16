@@ -93,7 +93,17 @@ def load():
             "dropout": 0.0,
             "num_res_blocks": 2,
             "temperal_downsample": [False, True, True],
-            "z_dim": 16
+            "z_dim": 16,
+            "latents_mean": [
+                -0.7571, -0.7089, -0.9113,  0.1075, -0.1745,  0.9653,
+                -0.1517,  1.5508,  0.4134, -0.0715,  0.5517, -0.3632,
+                -0.1922, -0.9497,  0.2503, -0.2921
+            ],
+            "latents_std": [
+                2.8184, 1.4541, 2.3275, 2.6558, 1.2196, 1.7708,
+                2.6052, 2.0743, 3.2687, 2.1526, 2.8652, 1.5579,
+                1.6382, 1.1253, 2.8251, 1.9160
+            ]
         }
         with open(os.path.join(vae_dir, "config.json"), "w") as f:
             json.dump(vae_config, f)
@@ -155,9 +165,13 @@ def _vae_encode(image_tensor):
     x = x * 2.0 - 1.0  # normalize to [-1, 1]
     x = x.unsqueeze(2)  # add temporal dim: [B, C, H, W] → [B, C, 1, H, W]
     with torch.no_grad():
-        latent = _vae.encode(x).latent_dist.sample()
-    # Squeeze temporal dim and return as ComfyUI-compatible latent dict
-    latent = latent.squeeze(2)  # [B, C, 1, H, W] → [B, C, H, W]
+        latent = _vae.encode(x).latent_dist.mode()
+    # Squeeze temporal dim: [B, C, 1, H, W] → [B, C, H, W]
+    latent = latent.squeeze(2)
+    # Normalize to zero-mean unit-variance space expected by the UNet
+    latents_mean = torch.tensor(_vae.config.latents_mean).view(1, -1, 1, 1).to(latent)
+    latents_std = torch.tensor(_vae.config.latents_std).view(1, -1, 1, 1).to(latent)
+    latent = (latent - latents_mean) / latents_std
     return {"samples": latent.float().cpu()}
 
 def _vae_decode(latent_dict):
@@ -166,6 +180,10 @@ def _vae_decode(latent_dict):
     latent = latent_dict["samples"].to(_vae.device, dtype=_vae.dtype)
     if latent.ndim == 4:
         latent = latent.unsqueeze(2)  # add temporal dim: [B,C,H,W] → [B,C,1,H,W]
+    # Denormalize from UNet's normalized space back to raw VAE latent space
+    latents_mean = torch.tensor(_vae.config.latents_mean).view(1, -1, 1, 1, 1).to(latent)
+    latents_std = torch.tensor(_vae.config.latents_std).view(1, -1, 1, 1, 1).to(latent)
+    latent = latent * latents_std + latents_mean
     with torch.no_grad():
         decoded = _vae.decode(latent).sample
     # The output image from decode is 5D [B, C, T, H, W]. We squeeze T=1.
