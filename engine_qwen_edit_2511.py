@@ -162,8 +162,9 @@ def _vae_encode(image_tensor):
 
 def _vae_decode(latent_dict):
     """Decode latent dict → image tensor [B,H,W,C] 0-1"""
-    # Latent from sampler is [B, C, H, W]. Diffusers decode takes 4D latents directly.
+    # Latent from sampler is [B, C, H, W]. The Qwen 3D VAE needs [B, C, T, H, W].
     latent = latent_dict["samples"].to(_vae.device, dtype=_vae.dtype)
+    latent = latent.unsqueeze(2)  # add temporal dim: [B,C,H,W] → [B,C,1,H,W]
     with torch.no_grad():
         decoded = _vae.decode(latent).sample
     # The output image from decode is 5D [B, C, T, H, W]. We squeeze T=1.

@@ -290,25 +290,30 @@ button[aria-label="Pan"], button[aria-label="Move"] {
 # JavaScript: override brush max size and fix preview
 JS_CUSTOM = """
 <script>
-// Prevent browsers from automatically downloading blob URLs when "Open Image in New Tab" is clicked
-document.addEventListener('contextmenu', function(e) {
-    const img = e.target.closest('img');
-    if (img && img.src && img.src.startsWith('blob:')) {
-        // Find if this image is wrapped in an anchor that we can hijack
-        const a = img.closest('a');
-        if (a) {
-            a.onclick = function(ev) {
-                if (ev.ctrlKey || ev.metaKey || ev.button === 1) { // Middle click or Ctrl/Cmd click
-                    ev.preventDefault();
-                    ev.stopPropagation();
-                    fetch(img.src).then(r => r.blob()).then(blob => {
-                        window.open(URL.createObjectURL(blob), '_blank');
-                    });
-                }
-            };
+// Fix "Open in New Tab" — override navigator.share so Gradio's gallery
+// share button opens the image in a new tab instead of downloading it.
+(function() {
+    var _origCanShare = navigator.canShare ? navigator.canShare.bind(navigator) : null;
+    var _origShare = navigator.share ? navigator.share.bind(navigator) : null;
+
+    navigator.canShare = function(data) {
+        if (data && data.files && data.files.length > 0 &&
+            data.files[0].type && data.files[0].type.startsWith('image/')) {
+            return true;
         }
-    }
-}, true);
+        return _origCanShare ? _origCanShare(data) : false;
+    };
+
+    navigator.share = async function(data) {
+        if (data && data.files && data.files.length > 0 &&
+            data.files[0].type && data.files[0].type.startsWith('image/')) {
+            var url = URL.createObjectURL(data.files[0]);
+            window.open(url, '_blank');
+            return;
+        }
+        if (_origShare) return _origShare(data);
+    };
+})();
 
 // Override brush/eraser size slider max from default ~100 to 300
 function boostBrushMax() {
