@@ -395,7 +395,7 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="CheapFakeStudio") as demo:
         with gr.Tab("🖼️ Generate"):
             with gr.Row():
                 with gr.Column(scale=1):
-                    gen_model = gr.Dropdown(MODEL_GEN, value="🌊 FLUX.2-klein 4B",
+                    gen_model = gr.Dropdown(MODEL_GEN, value="⚡ Z-Image Turbo",
                                             label="Model")
                     gen_prompt = gr.Textbox(
                         label="Prompt", lines=4,
