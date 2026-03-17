@@ -56,8 +56,24 @@ def load():
         _unet = n["UnetLoaderGGUF"].load_unet(
             "qwen-image-edit-2511-Q4_0.gguf"
         )[0]
-        _clip = n["CLIPLoaderGGUF"].load_clip(
+        # Try best available CLIP quantization (Q4_K_S > Q3_K_M > Q2_K)
+        _clip_candidates = [
+            "Qwen2.5-VL-7B-Instruct-Q4_K_S.gguf",
+            "Qwen2.5-VL-7B-Instruct-Q3_K_M.gguf",
             "Qwen2.5-VL-7B-Instruct-Q2_K.gguf",
+        ]
+        _clip_file = None
+        for c in _clip_candidates:
+            _clip_path = os.path.join("/content/ComfyUI/models/clip", c)
+            if os.path.exists(_clip_path):
+                _clip_file = c
+                break
+        if _clip_file is None:
+            _clip_file = "Qwen2.5-VL-7B-Instruct-Q2_K.gguf"
+
+        print(f"  📊 Using CLIP: {_clip_file}")
+        _clip = n["CLIPLoaderGGUF"].load_clip(
+            _clip_file,
             type="qwen2vl"
         )[0]
 
