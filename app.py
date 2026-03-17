@@ -395,7 +395,7 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="CheapFakeStudio") as demo:
         with gr.Tab("🖼️ Generate"):
             with gr.Row():
                 with gr.Column(scale=1):
-                    gen_model = gr.Dropdown(MODEL_GEN, value="⚡ Z-Image Turbo",
+                    gen_model = gr.Dropdown(MODEL_GEN, value="🌊 FLUX.2-klein 4B",
                                             label="Model")
                     gen_prompt = gr.Textbox(
                         label="Prompt", lines=4,
@@ -432,7 +432,7 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="CheapFakeStudio") as demo:
         with gr.Tab("✏️ Img2Img"):
             with gr.Row():
                 with gr.Column(scale=1):
-                    i2i_model = gr.Dropdown(MODEL_EDIT, value=MODEL_EDIT[0],
+                    i2i_model = gr.Dropdown(MODEL_EDIT, value="🌊 FLUX.2-klein 4B",
                                              label="Model")
                     i2i_img = gr.Image(type="pil", label="Upload Photo", sources=["upload"])
                     i2i_prompt = gr.Textbox(label="Prompt / Edit Instruction", lines=2,
@@ -466,7 +466,7 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="CheapFakeStudio") as demo:
         with gr.Tab("🎨 Inpaint"):
             with gr.Row():
                 with gr.Column(scale=1):
-                    inp_model = gr.Dropdown(MODEL_EDIT, value=MODEL_EDIT[0],
+                    inp_model = gr.Dropdown(MODEL_EDIT, value="🌊 FLUX.2-klein 4B",
                                              label="Model")
                     inp_mask_mode = gr.Radio(
                         choices=["🖌️ Manual Paint", "🏞️ Background Only", "🎭 Everything Except Face"],
