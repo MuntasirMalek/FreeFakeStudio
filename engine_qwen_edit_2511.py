@@ -51,11 +51,27 @@ def load():
     if _loaded:
         return
     n = _get_nodes()
-    print("⏳ Loading Qwen-Image-Edit-2511 Q4_K_M GGUF...")
+    print("⏳ Loading Qwen-Image-Edit-2511 GGUF...")
     with torch.inference_mode():
-        _unet = n["UnetLoaderGGUF"].load_unet(
-            "qwen-image-edit-2511-Q4_0.gguf"
-        )[0]
+        # Try best available diffusion model (Q4_K_M > Q4_0 > Q3_K_M > Q3_K_S)
+        _unet_candidates = [
+            "qwen-image-edit-2511-Q4_K_M.gguf",
+            "qwen-image-edit-2511-Q4_0.gguf",
+            "qwen-image-edit-2511-Q3_K_M.gguf",
+            "qwen-image-edit-2511-Q3_K_S.gguf",
+        ]
+        _unet_file = None
+        for u in _unet_candidates:
+            _unet_path = os.path.join("/content/ComfyUI/models/diffusion_models", u)
+            if os.path.exists(_unet_path):
+                _unet_file = u
+                break
+        if _unet_file is None:
+            _unet_file = "qwen-image-edit-2511-Q3_K_M.gguf"
+
+        print(f"  📊 Using UNET: {_unet_file}")
+        _unet = n["UnetLoaderGGUF"].load_unet(_unet_file)[0]
+
         # Try best available CLIP quantization (Q4_K_S > Q3_K_M > Q2_K)
         _clip_candidates = [
             "Qwen2.5-VL-7B-Instruct-Q4_K_S.gguf",
@@ -69,7 +85,7 @@ def load():
                 _clip_file = c
                 break
         if _clip_file is None:
-            _clip_file = "Qwen2.5-VL-7B-Instruct-Q2_K.gguf"
+            _clip_file = "Qwen2.5-VL-7B-Instruct-Q3_K_M.gguf"
 
         print(f"  📊 Using CLIP: {_clip_file}")
         _clip = n["CLIPLoaderGGUF"].load_clip(
