@@ -254,14 +254,22 @@ def _encode_prompt(prompt, source_image_pil=None, is_negative=False):
 @torch.inference_mode()
 def img2img(input_image, prompt, negative, seed, cfg, denoise, steps=40):
     """Instruction-based image editing via Qwen-Image-Edit."""
-    import node_helpers
+    import node_helpers, comfy.model_management as mm
 
     input_image = _resize_to_multiple(input_image.convert("RGB"))
     img_tensor = _pil_to_tensor(input_image)
 
-    # VAE encode source image → 5D latent
+    # VAE encode source image → 5D reference latent
     ref_latent = _vae_encode(img_tensor)
-    latent = {"samples": ref_latent.clone()}
+
+    # Qwen-Image-Edit is instruction-based: start from empty noise,
+    # the model uses reference_latents to understand the source image.
+    h_lat, w_lat = ref_latent.shape[3], ref_latent.shape[4]
+    empty_latent = torch.zeros(
+        [1, 16, 1, h_lat, w_lat],
+        device=mm.intermediate_device()
+    )
+    latent = {"samples": empty_latent}
 
     # CLIP encoding with VL image conditioning + text
     pos = _encode_prompt(prompt, source_image_pil=input_image)
@@ -272,11 +280,11 @@ def img2img(input_image, prompt, negative, seed, cfg, denoise, steps=40):
         pos, {"reference_latents": [ref_latent]}, append=True
     )
 
-    print(f"  📊 img2img latent shape: {ref_latent.shape}, denoise: {denoise}")
+    print(f"  📊 img2img ref_latent: {ref_latent.shape}, denoise: 1.0 (instruction-based)")
 
     samples = _get_nodes()["KSampler"].sample(
         _unet, seed, int(steps), float(cfg),
-        "euler", "simple", pos, neg, latent, denoise=float(denoise)
+        "euler", "simple", pos, neg, latent, denoise=1.0
     )[0]
     decoded = _vae_decode(samples).detach()
     return Image.fromarray(np.array(decoded * 255, dtype=np.uint8)[0])
