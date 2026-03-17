@@ -262,15 +262,12 @@ CSS = """
     font-family: 'Inter', -apple-system, sans-serif !important;
     max-width: 1400px !important;
 }
-.main-title {
-    display:inline-block; font-size:1.3em; font-weight:800; margin:0; padding:4px 0;
-}
+.main-title { text-align:center; font-size:2.8em; font-weight:800; margin:0 0 4px 0; }
 .main-title span {
     background: linear-gradient(135deg, #60a5fa, #a78bfa);
     -webkit-background-clip: text; -webkit-text-fill-color: transparent;
 }
 .subtitle { text-align:center; color:#9ca3af; margin-bottom:15px; font-size:1.05em; }
-.compact-header { margin:0 0 2px 0; padding:0 8px; }
 .footer-link { color:#60a5fa !important; text-decoration:none; }
 
 /* Prevent scrollbars from interrupting brush strokes in ImageEditor */
@@ -388,7 +385,6 @@ def preview_auto_mask(image, mask_mode):
 # ── Build UI ───────────────────────────────────────────────
 with gr.Blocks(theme=zfooocus_theme, css=CSS, title="CheapFakeStudio") as demo:
 
-    gr.HTML("""<div class="compact-header"><h1 class="main-title">🎭 <span>CheapFakeStudio</span></h1></div>""")
     gr.HTML(JS_CUSTOM)
 
     with gr.Tabs():
@@ -417,6 +413,7 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="CheapFakeStudio") as demo:
                         gen_denoise = gr.Slider(0.1, 1.0, value=1.0, step=0.05, label="Denoise")
                         gen_neg = gr.Textbox(DEFAULT_NEG, label="Negative Prompt", lines=2)
                 with gr.Column(scale=1):
+                    gr.HTML('<h1 class="main-title">🎭 <span>CheapFakeStudio</span></h1>')
                     gen_gallery = gr.Gallery(label="Results", columns=2, height=520,
                                              object_fit="contain", show_download_button=True,
                                              show_fullscreen_button=True, preview=True)
@@ -450,6 +447,7 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="CheapFakeStudio") as demo:
                         i2i_neg = gr.Textbox(DEFAULT_NEG, label="Negative Prompt", lines=2)
 
                 with gr.Column(scale=1):
+                    gr.HTML('<h1 class="main-title">🎭 <span>CheapFakeStudio</span></h1>')
                     i2i_gallery = gr.Gallery(label="Results", columns=2, height=520,
                                               object_fit="contain", show_download_button=True,
                                               show_fullscreen_button=True, preview=True)
@@ -500,6 +498,7 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="CheapFakeStudio") as demo:
                         inp_neg = gr.Textbox(DEFAULT_NEG, label="Negative Prompt", lines=2)
                     inp_clear = gr.ClearButton([inp_editor, inp_image, inp_mask_preview], value="🗑️ Clear All")
                 with gr.Column(scale=1):
+                    gr.HTML('<h1 class="main-title">🎭 <span>CheapFakeStudio</span></h1>')
                     inp_gallery = gr.Gallery(label="Results", columns=2, height=520,
                                               object_fit="contain", show_download_button=True,
                                               show_fullscreen_button=True, preview=True)
@@ -551,14 +550,22 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="CheapFakeStudio") as demo:
                 [inp_gallery, inp_dl, inp_seed_out])
 
             def optimize_cfg_for_model(model_name):
-                # Instruct/Standard models need higher CFG to magnify text guidance.
+                # Qwen needs higher CFG (official pipeline uses true_cfg=4.0)
                 # Turbo/Flow-matching models (like Flux) need 1.0 CFG.
                 if "Qwen" in getattr(model_name, "value", str(model_name)):
-                    return gr.update(value=5.0)
+                    return gr.update(value=4.0)
                 return gr.update(value=1.0)
+
+            def optimize_steps_for_model(model_name):
+                # Qwen needs more steps (official pipeline: 50). Use 28 as compromise.
+                if "Qwen" in getattr(model_name, "value", str(model_name)):
+                    return gr.update(value=28)
+                return gr.update(value=8)
                 
             i2i_model.change(optimize_cfg_for_model, inputs=[i2i_model], outputs=[i2i_cfg])
             inp_model.change(optimize_cfg_for_model, inputs=[inp_model], outputs=[inp_cfg])
+            i2i_model.change(optimize_steps_for_model, inputs=[i2i_model], outputs=[i2i_steps])
+            inp_model.change(optimize_steps_for_model, inputs=[inp_model], outputs=[inp_steps])
 
     gr.Markdown("""
     ---

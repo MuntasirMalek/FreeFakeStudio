@@ -146,7 +146,7 @@ def is_loaded():
 def _pil_to_tensor(img):
     return torch.from_numpy(np.array(img.convert("RGB")).astype(np.float32) / 255.0).unsqueeze(0)
 
-def _resize_to_multiple(img, multiple=8, max_dim=1024):
+def _resize_to_multiple(img, multiple=16, max_dim=1024):
     w, h = img.size
     scale = min(max_dim / max(w, h), 1.0)
     new_w = max(multiple, round(w * scale / multiple) * multiple)
@@ -175,11 +175,36 @@ def _vae_decode(latent_dict):
     decoded = decoded.clamp(0, 1)
     return decoded.permute(0, 2, 3, 1).float().cpu()
 
+def _prepare_clip_image(img_pil, target_area=384*384):
+    """Resize image for CLIP VL conditioning (~384×384 as per official pipeline)."""
+    img = img_pil.convert("RGB")
+    w, h = img.size
+    scale = math.sqrt(target_area / (w * h))
+    nw, nh = round(w * scale), round(h * scale)
+    img = img.resize((nw, nh), Image.LANCZOS)
+    return _pil_to_tensor(img)
+
+def _encode_prompt(prompt, source_image_pil=None, is_negative=False):
+    """Encode prompt, optionally with VL image conditioning. Falls back to text-only."""
+    n = _get_nodes()
+
+    if source_image_pil is not None and not is_negative:
+        try:
+            clip_img = _prepare_clip_image(source_image_pil)
+            tokens = _clip.tokenize(prompt, images=[clip_img[:, :, :, :3]])
+            cond = _clip.encode_from_tokens_scheduled(tokens)
+            print("  📊 CLIP: image+text conditioning ✓")
+            return cond
+        except Exception as e:
+            print(f"  ⚠️ CLIP image conditioning failed ({e}), using text-only")
+
+    # Text-only fallback
+    return n["CLIPTextEncode"].encode(_clip, prompt)[0]
+
 # ── Img2Img (instruction-based editing) ───────────────────
 @torch.inference_mode()
 def img2img(input_image, prompt, negative, seed, cfg, denoise, steps=40):
     """Instruction-based image editing via Qwen-Image-Edit."""
-    n = _get_nodes()
     import node_helpers
 
     input_image = _resize_to_multiple(input_image.convert("RGB"))
@@ -189,9 +214,9 @@ def img2img(input_image, prompt, negative, seed, cfg, denoise, steps=40):
     ref_latent = _vae_encode(img_tensor)
     latent = {"samples": ref_latent.clone()}
 
-    # Text-only CLIP encoding (avoids issues with GGUF VL image processing)
-    pos = n["CLIPTextEncode"].encode(_clip, prompt)[0]
-    neg = n["CLIPTextEncode"].encode(_clip, negative)[0]
+    # CLIP encoding with VL image conditioning + text
+    pos = _encode_prompt(prompt, source_image_pil=input_image)
+    neg = _encode_prompt(negative, is_negative=True)
 
     # Attach source image as reference_latents (proper QwenImage conditioning)
     pos = node_helpers.conditioning_set_values(
@@ -200,7 +225,7 @@ def img2img(input_image, prompt, negative, seed, cfg, denoise, steps=40):
 
     print(f"  📊 img2img latent shape: {ref_latent.shape}, denoise: {denoise}")
 
-    samples = n["KSampler"].sample(
+    samples = _get_nodes()["KSampler"].sample(
         _unet, seed, int(steps), float(cfg),
         "euler", "simple", pos, neg, latent, denoise=float(denoise)
     )[0]
@@ -242,7 +267,7 @@ def inpaint(original, mask_combined, prompt, negative, seed, cfg, denoise, steps
     n = _get_nodes()
     import node_helpers, comfy.model_management as mm
 
-    crop_pil = _resize_to_multiple(original, multiple=8, max_dim=1024)
+    crop_pil = _resize_to_multiple(original, multiple=16, max_dim=1024)
     cw, ch = crop_pil.size
 
     mask_pil = Image.fromarray(mask_combined).resize((cw, ch), Image.NEAREST)
@@ -261,9 +286,9 @@ def inpaint(original, mask_combined, prompt, negative, seed, cfg, denoise, steps
     )
     latent = {"samples": empty_latent}
 
-    # Text-only CLIP encoding + reference_latents
-    pos = n["CLIPTextEncode"].encode(_clip, prompt)[0]
-    neg = n["CLIPTextEncode"].encode(_clip, negative)[0]
+    # CLIP encoding with VL image conditioning + reference_latents
+    pos = _encode_prompt(prompt, source_image_pil=crop_pil)
+    neg = _encode_prompt(negative, is_negative=True)
 
     pos = node_helpers.conditioning_set_values(
         pos, {"reference_latents": [ref_latent]}, append=True
@@ -271,7 +296,7 @@ def inpaint(original, mask_combined, prompt, negative, seed, cfg, denoise, steps
 
     print(f"  📊 inpaint ref_latent: {ref_latent.shape}, start: {empty_latent.shape}")
 
-    samples = n["KSampler"].sample(
+    samples = _get_nodes()["KSampler"].sample(
         _unet, seed, int(steps), float(cfg),
         "euler", "simple", pos, neg, latent, denoise=1.0
     )[0]
