@@ -555,17 +555,9 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="CheapFakeStudio") as demo:
                 if "Qwen" in getattr(model_name, "value", str(model_name)):
                     return gr.update(value=4.0)
                 return gr.update(value=1.0)
-
-            def optimize_steps_for_model(model_name):
-                # Qwen needs more steps (official pipeline: 50). Use 28 as compromise.
-                if "Qwen" in getattr(model_name, "value", str(model_name)):
-                    return gr.update(value=28)
-                return gr.update(value=8)
                 
             i2i_model.change(optimize_cfg_for_model, inputs=[i2i_model], outputs=[i2i_cfg])
             inp_model.change(optimize_cfg_for_model, inputs=[inp_model], outputs=[inp_cfg])
-            i2i_model.change(optimize_steps_for_model, inputs=[i2i_model], outputs=[i2i_steps])
-            inp_model.change(optimize_steps_for_model, inputs=[inp_model], outputs=[inp_steps])
 
     gr.Markdown("""
     ---
