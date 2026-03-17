@@ -84,10 +84,21 @@ def load():
         )[0]
         
         # Load GGUF CLIP (Single Qwen3 8B, no T5 needed for klein)
+        # Q2_K saves ~0.8GB vs Q3_K_M — needed to stay under 15GB T4 VRAM
+        import os
+        clip_dir = "/content/ComfyUI/models/clip"
+        txt_dir = "/content/ComfyUI/models/text_encoders"
+        clip_name = "Qwen3-8B-Q2_K_L.gguf"
+        for candidate in ["Qwen3-8B-Q2_K_L.gguf", "Qwen3-8B-Q3_K_M.gguf", "Qwen3-8B-Q2_K.gguf"]:
+            if (os.path.exists(os.path.join(clip_dir, candidate)) or
+                os.path.exists(os.path.join(txt_dir, candidate))):
+                clip_name = candidate
+                break
         _clip = n["CLIPLoaderGGUF"].load_clip(
-            clip_name="Qwen3-8B-Q3_K_M.gguf",
+            clip_name=clip_name,
             type="flux2"
         )[0]
+        print(f"  📎 CLIP: {clip_name}")
         
         # Load VAE
         _vae  = n["VAELoader"].load_vae("flux2-vae.safetensors")[0]
