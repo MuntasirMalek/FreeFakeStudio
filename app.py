@@ -550,10 +550,8 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="CheapFakeStudio") as demo:
                 [inp_gallery, inp_dl, inp_seed_out])
 
             def optimize_cfg_for_model(model_name):
-                # Qwen needs higher CFG (official pipeline uses true_cfg=4.0)
-                # Turbo/Flow-matching models (like Flux) need 1.0 CFG.
-                if "Qwen" in getattr(model_name, "value", str(model_name)):
-                    return gr.update(value=4.0)
+                # FLUX-type models (Qwen, FLUX) work best with CFG=1.0 in ComfyUI
+                # (guidance is embedded in the model, not applied via CFG)
                 return gr.update(value=1.0)
                 
             i2i_model.change(optimize_cfg_for_model, inputs=[i2i_model], outputs=[i2i_cfg])

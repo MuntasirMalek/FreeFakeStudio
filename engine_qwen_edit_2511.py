@@ -72,6 +72,23 @@ def load():
         except Exception as e:
             print(f"  📊 Could not inspect latent format: {e}")
 
+        # Apply shift override — critical for quality!
+        # Default shift is 1.15 which produces blurry/cartoon results.
+        # Unsloth recommends shift=12-13 for good outputs.
+        try:
+            from nodes import NODE_CLASS_MAPPINGS as _ncm
+            msf_cls = _ncm.get("ModelSamplingFlux")
+            if msf_cls:
+                _unet = msf_cls().patch(
+                    _unet, max_shift=13.0, base_shift=0.5,
+                    width=1024, height=1024
+                )[0]
+                print("  ✅ Applied shift=13.0 (quality fix)")
+            else:
+                print("  ⚠️ ModelSamplingFlux node not found, using default shift")
+        except Exception as e:
+            print(f"  ⚠️ Could not apply shift override: {e}")
+
         # Load VAE via diffusers
         from diffusers import AutoencoderKLQwenImage
         import comfy.model_management as mm
