@@ -422,6 +422,8 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="CheapFakeStudio") as demo:
 
 
             gen_btn.click(
+                lambda: ([], None, ""),
+                outputs=[gen_gallery, gen_dl, gen_seed_out]).then(
                 generate_image,
                 [gen_model, gen_prompt, gen_neg, gen_aspect, gen_seed, gen_cfg, gen_denoise, gen_num, gen_steps],
                 [gen_gallery, gen_dl, gen_seed_out])
@@ -456,6 +458,8 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="CheapFakeStudio") as demo:
 
 
             i2i_btn.click(
+                lambda: ([], None, ""),
+                outputs=[i2i_gallery, i2i_dl, i2i_seed_out]).then(
                 do_img2img,
                 [i2i_model, i2i_img, i2i_prompt, i2i_neg, i2i_seed, i2i_cfg, i2i_denoise, i2i_num, i2i_steps],
                 [i2i_gallery, i2i_dl, i2i_seed_out])
@@ -544,6 +548,8 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="CheapFakeStudio") as demo:
                                  auto_mask_data, steps)
 
             inp_btn.click(
+                lambda: ([], None, ""),
+                outputs=[inp_gallery, inp_dl, inp_seed_out]).then(
                 do_inpaint_wrapper,
                 [inp_model, inp_editor, inp_image, inp_prompt, inp_neg, inp_seed,
                  inp_cfg, inp_denoise, inp_num, inp_mask_mode, inp_auto_mask_state, inp_steps],
