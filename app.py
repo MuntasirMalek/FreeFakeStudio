@@ -1,5 +1,5 @@
 # ============================================================
-#  CheapFakeStudio — Multi-Model AI Image Studio
+#  FreeFakeStudio — Multi-Model AI Image Studio
 #  Models: Z-Image Turbo · FLUX.2-klein · Qwen-Image-Edit
 #  Built for Google Colab T4 (15GB VRAM)
 # ============================================================
@@ -383,7 +383,7 @@ def preview_auto_mask(image, mask_mode):
 
 
 # ── Build UI ───────────────────────────────────────────────
-with gr.Blocks(theme=zfooocus_theme, css=CSS, title="CheapFakeStudio") as demo:
+with gr.Blocks(theme=zfooocus_theme, css=CSS, title="FreeFakeStudio") as demo:
 
     gr.HTML(JS_CUSTOM)
 
@@ -413,7 +413,7 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="CheapFakeStudio") as demo:
                         gen_denoise = gr.Slider(0.1, 1.0, value=1.0, step=0.05, label="Denoise")
                         gen_neg = gr.Textbox(DEFAULT_NEG, label="Negative Prompt", lines=2)
                 with gr.Column(scale=1):
-                    gr.HTML('<h1 class="main-title">🎭 <span>CheapFakeStudio</span></h1>')
+                    gr.HTML('<h1 class="main-title">🎭 <span>FreeFakeStudio</span></h1>')
                     gen_gallery = gr.Gallery(label="Results", columns=2, height=520,
                                              object_fit="contain", show_download_button=True,
                                              show_fullscreen_button=True, preview=True)
@@ -449,7 +449,7 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="CheapFakeStudio") as demo:
                         i2i_neg = gr.Textbox(DEFAULT_NEG, label="Negative Prompt", lines=2)
 
                 with gr.Column(scale=1):
-                    gr.HTML('<h1 class="main-title">🎭 <span>CheapFakeStudio</span></h1>')
+                    gr.HTML('<h1 class="main-title">🎭 <span>FreeFakeStudio</span></h1>')
                     i2i_gallery = gr.Gallery(label="Results", columns=2, height=520,
                                               object_fit="contain", show_download_button=True,
                                               show_fullscreen_button=True, preview=True)
@@ -502,7 +502,7 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="CheapFakeStudio") as demo:
                         inp_neg = gr.Textbox(DEFAULT_NEG, label="Negative Prompt", lines=2)
                     inp_clear = gr.ClearButton([inp_editor, inp_image, inp_mask_preview], value="🗑️ Clear All")
                 with gr.Column(scale=1):
-                    gr.HTML('<h1 class="main-title">🎭 <span>CheapFakeStudio</span></h1>')
+                    gr.HTML('<h1 class="main-title">🎭 <span>FreeFakeStudio</span></h1>')
                     inp_gallery = gr.Gallery(label="Results", columns=2, height=520,
                                               object_fit="contain", show_download_button=True,
                                               show_fullscreen_button=True, preview=True)
@@ -566,7 +566,7 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="CheapFakeStudio") as demo:
     gr.Markdown("""
     ---
     <p style="text-align:center; color:#6b7280; font-size:0.85em;">
-    🎭 CheapFakeStudio — Open-source Multi-Model AI Image Studio
+    🎭 FreeFakeStudio — Open-source Multi-Model AI Image Studio
     </p>
     """)
 

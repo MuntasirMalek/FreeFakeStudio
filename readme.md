@@ -1,8 +1,8 @@
-# 🎭 CheapFakeStudio
+# 🎭 FreeFakeStudio
 
 **Open-source Multi-Model AI Image Studio** — Generate, Img2Img & Inpaint with FLUX, Qwen, Z-Image and many more. Zero-setup for Google Colab.
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/MuntasirMalek/CheapFakeStudio/blob/main/CheapFakeStudio.ipynb)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/MuntasirMalek/FreeFakeStudio/blob/main/FreeFakeStudio.ipynb)
 
 ## Features
 
@@ -15,7 +15,7 @@ Multiple state-of-the-art models in one unified studio. No local installation re
 | 🎨 **Inpaint** | Paint mask on photo → only painted area gets regenerated |
 
 ### Inpaint Superpowers
-Powered by structural-locking constraints and native model APIs, CheapFakeStudio allows for incredibly precise inpainting:
+Powered by structural-locking constraints and native model APIs, FreeFakeStudio allows for incredibly precise inpainting:
 - Drop your Denoise to `0.55` to mathematically lock your original clothing silhouette even under massive, sloppy paint masks.
 - Supports native Qwen-Image-Edit conversational instructions (e.g., *"change her saree to green"*)
 - Supports traditional mask inpainting via FLUX.2 and Z-Image.
