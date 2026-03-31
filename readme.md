@@ -17,7 +17,7 @@ Multiple state-of-the-art models in one unified studio. No local installation re
 ### Inpaint Superpowers
 Powered by structural-locking constraints and native model APIs, FreeFakeStudio allows for incredibly precise inpainting:
 - Drop your Denoise to `0.55` to mathematically lock your original clothing silhouette even under massive, sloppy paint masks.
-- Supports native Qwen-Image-Edit conversational instructions (e.g., *"change her saree to green"*)
+- Supports native Qwen-Image-Edit conversational instructions (e.g., *"change her dress to green"*)
 - Supports traditional mask inpainting via FLUX.2 and Z-Image.
 
 ## Quick Start

@@ -450,7 +450,7 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="FreeFakeStudio") as demo:
                                              label="Model")
                     i2i_img = gr.Image(type="pil", label="Upload Photo", sources=["upload"])
                     i2i_prompt = gr.Textbox(label="Prompt / Edit Instruction", lines=2,
-                        placeholder="e.g., change the dress to a red saree")
+                        placeholder="e.g., change the dress to red")
                     i2i_num = gr.Slider(1, 16, value=2, step=1, label="Number of Images")
                     i2i_steps = gr.Slider(1, 50, value=20, step=1, label="Steps")
                     i2i_btn = gr.Button("✨ Transform", variant="primary", size="lg")
