@@ -157,10 +157,15 @@ def _select_mask_for_prompt(prompt, image_pil):
         return mask, cleaned
 
     # Everything else (dress, hair, clothes, style, etc.)
-    # → mask everything except face (preserve face, regenerate body/clothes/bg)
-    mask = auto_mask_except_face(image_pil)
-    print(f"🎯 Non-background edit → mask except face, prompt: '{prompt}'")
-    return mask, prompt
+    # → mask ONLY body/clothing by combining two masks:
+    #   (everything except face) AND (NOT background) = clothing only
+    #   This preserves BOTH face AND background, only changes the clothing/body.
+    except_face = auto_mask_except_face(image_pil)  # 255 = everything except face
+    background = auto_mask_background(image_pil)     # 255 = background
+    # Clothing = masked by except_face BUT not masked by background
+    clothing_mask = np.where((except_face > 127) & (background < 127), 255, 0).astype(np.uint8)
+    print(f"🎯 Clothing/body edit → mask clothing only, prompt: '{prompt}'")
+    return clothing_mask, prompt
 
 def do_img2img(model_name, input_image, prompt, negative,
                seed, cfg, denoise, num_images, steps):
