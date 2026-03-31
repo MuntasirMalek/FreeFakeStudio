@@ -22,7 +22,7 @@ import engine_qwen_edit_2511
 _current_model = None
 
 MODEL_GEN = ["⚡ Z-Image Turbo", "🔮 FLUX.2-klein 9B", "🌊 FLUX.2-klein 4B"]
-MODEL_EDIT = ["🔮 FLUX.2-klein 9B", "🌊 FLUX.2-klein 4B", "🎨 Qwen-Image-Edit"]
+MODEL_EDIT = ["🎨 Qwen-Image-Edit", "⚡ Z-Image Turbo", "🔮 FLUX.2-klein 9B", "🌊 FLUX.2-klein 4B"]
 
 _ENGINE_MAP = {
     "⚡ Z-Image Turbo": engine_z_image,
@@ -172,7 +172,7 @@ def do_img2img(model_name, input_image, prompt, negative,
     mask = None
     img_prompt = prompt
     effective_denoise = denoise
-    if model_name in ("🔮 FLUX.2-klein 9B", "🌊 FLUX.2-klein 4B"):
+    if model_name in ("🔮 FLUX.2-klein 9B", "🌊 FLUX.2-klein 4B", "⚡ Z-Image Turbo"):
         mask, img_prompt, effective_denoise = _select_mask_for_prompt(prompt, input_image)
 
     paths = []
@@ -474,7 +474,7 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="FreeFakeStudio") as demo:
         with gr.Tab("✏️ Img2Img"):
             with gr.Row():
                 with gr.Column(scale=1):
-                    i2i_model = gr.Dropdown(MODEL_EDIT, value="🌊 FLUX.2-klein 4B",
+                    i2i_model = gr.Dropdown(MODEL_EDIT, value="🎨 Qwen-Image-Edit",
                                              label="Model")
                     i2i_img = gr.Image(type="pil", label="Upload Photo", sources=["upload"])
                     i2i_prompt = gr.Textbox(label="Prompt / Edit Instruction", lines=2,
@@ -510,7 +510,7 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="FreeFakeStudio") as demo:
         with gr.Tab("🎨 Inpaint"):
             with gr.Row():
                 with gr.Column(scale=1):
-                    inp_model = gr.Dropdown(MODEL_EDIT, value="🌊 FLUX.2-klein 4B",
+                    inp_model = gr.Dropdown(MODEL_EDIT, value="🎨 Qwen-Image-Edit",
                                              label="Model")
                     inp_mask_mode = gr.Radio(
                         choices=["🖌️ Manual Paint", "🏞️ Background Only", "🎭 Everything Except Face"],

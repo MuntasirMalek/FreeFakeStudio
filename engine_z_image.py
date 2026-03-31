@@ -88,7 +88,13 @@ def generate(prompt, negative, width, height, seed, cfg, denoise, steps=8):
 
 # ── Img2Img ────────────────────────────────────────────────
 @torch.inference_mode()
-def img2img(input_image, prompt, negative, seed, cfg, denoise, steps=8):
+def img2img(input_image, prompt, negative, seed, cfg, denoise, steps=8, mask=None):
+    """img2img with optional mask support.
+    If mask is provided, routes through inpaint to preserve unmasked regions.
+    """
+    if mask is not None:
+        return inpaint(input_image, mask, prompt, negative, seed, cfg, float(denoise), int(steps))
+
     n = _get_nodes()
     input_image = _resize_to_multiple(input_image)
     img_tensor = _pil_to_tensor(input_image)
