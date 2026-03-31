@@ -155,23 +155,23 @@ def img2img(input_image, prompt, negative, seed, cfg, denoise, steps=4, mask=Non
     """
     if mask is not None:
         # Inpainting needs higher denoise to fully regenerate masked areas.
-        # Low denoise (e.g. 0.45) just barely modifies the original pixels.
+        # FLUX Klein 9B is 4-step distilled — cap steps at 8 (like Inpaint tab).
+        # More steps actually DEGRADES quality for distilled models.
         inpaint_denoise = max(float(denoise), 0.75)
-        inpaint_steps = max(int(steps), 8)
-        return inpaint(input_image, mask, prompt, negative, seed, cfg, inpaint_denoise, inpaint_steps)
+        return inpaint(input_image, mask, prompt, negative, seed, cfg, inpaint_denoise, 8)
 
-    # Fallback: standard img2img (for potential future editing models)
+    # Fallback: standard img2img — still cap steps for distilled model
     n = _get_nodes()
     input_image = _resize_to_multiple(input_image)
     img_tensor = _pil_to_tensor(input_image)
     pos = n["CLIPTextEncode"].encode(_clip, prompt)[0]
     neg = n["CLIPTextEncode"].encode(_clip, negative)[0]
     latent = n["VAEEncode"].encode(_vae, img_tensor)[0]
-    effective_steps = max(int(steps), 20)
+    effective_steps = min(int(steps), 8)
     effective_denoise = min(float(denoise), 0.55)
     samples = n["KSampler"].sample(
         _unet, seed, effective_steps, float(cfg),
-        "euler", "sgm_uniform", pos, neg, latent, denoise=effective_denoise
+        "euler", "simple", pos, neg, latent, denoise=effective_denoise
     )[0]
     decoded = n["VAEDecode"].decode(_vae, samples)[0].detach()
     return Image.fromarray(np.array(decoded * 255, dtype=np.uint8)[0])
