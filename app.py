@@ -440,11 +440,11 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="FreeFakeStudio") as demo:
                     i2i_prompt = gr.Textbox(label="Prompt / Edit Instruction", lines=2,
                         placeholder="e.g., change the dress to a red saree")
                     i2i_num = gr.Slider(1, 16, value=2, step=1, label="Number of Images")
-                    i2i_steps = gr.Slider(1, 50, value=8, step=1, label="Steps")
+                    i2i_steps = gr.Slider(1, 50, value=20, step=1, label="Steps")
                     i2i_btn = gr.Button("✨ Transform", variant="primary", size="lg")
                     with gr.Accordion("⚙️ Advanced", open=False):
                         i2i_cfg = gr.Slider(0.5, 10.0, value=1.0, step=0.1, label="CFG")
-                        i2i_denoise = gr.Slider(0.1, 1.0, value=0.65, step=0.05, label="Denoise")
+                        i2i_denoise = gr.Slider(0.1, 1.0, value=0.45, step=0.05, label="Denoise")
                         i2i_seed = gr.Number(value=0, label="Seed (0 = random)", precision=0)
                         i2i_neg = gr.Textbox(DEFAULT_NEG, label="Negative Prompt", lines=2)
 

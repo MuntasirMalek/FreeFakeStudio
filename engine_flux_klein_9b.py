@@ -153,9 +153,16 @@ def img2img(input_image, prompt, negative, seed, cfg, denoise, steps=4):
     pos = n["CLIPTextEncode"].encode(_clip, prompt)[0]
     neg = n["CLIPTextEncode"].encode(_clip, negative)[0]
     latent = n["VAEEncode"].encode(_vae, img_tensor)[0]
+
+    # For distilled models with few native steps, we need more total steps
+    # so partial denoise leaves enough original structure intact.
+    # Cap denoise to prevent the input image from being completely destroyed.
+    effective_steps = max(int(steps), 20)
+    effective_denoise = min(float(denoise), 0.55)
+
     samples = n["KSampler"].sample(
-        _unet, seed, int(steps), float(cfg),
-        "euler", "simple", pos, neg, latent, denoise=float(denoise)
+        _unet, seed, effective_steps, float(cfg),
+        "euler", "sgm_uniform", pos, neg, latent, denoise=effective_denoise
     )[0]
     decoded = n["VAEDecode"].decode(_vae, samples)[0].detach()
     return Image.fromarray(np.array(decoded * 255, dtype=np.uint8)[0])
