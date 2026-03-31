@@ -1,6 +1,6 @@
 # 🎭 FreeFakeStudio
 
-**Open-source Multi-Model AI Image Studio** — Generate, Img2Img & Inpaint with FLUX, Qwen, Z-Image and many more. Zero-setup for Google Colab.
+**Open-source Multi-Model AI Image Studio** — Generate, Img2Img & Inpaint with FLUX, Qwen, Z-Image and many more to come. Zero-setup for Google Colab.
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/MuntasirMalek/FreeFakeStudio/blob/main/FreeFakeStudio.ipynb)
 
