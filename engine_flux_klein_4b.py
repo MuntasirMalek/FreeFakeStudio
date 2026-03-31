@@ -111,7 +111,15 @@ def generate(prompt, negative, width, height, seed, cfg, denoise, steps=20):
 
 # ── Img2Img ────────────────────────────────────────────────
 @torch.inference_mode()
-def img2img(input_image, prompt, negative, seed, cfg, denoise, steps=20):
+def img2img(input_image, prompt, negative, seed, cfg, denoise, steps=20, mask=None):
+    """img2img with optional mask support.
+    If mask is provided (numpy uint8, 255=areas to regenerate), routes through
+    the inpaint pipeline which preserves unmasked regions pixel-perfectly.
+    """
+    if mask is not None:
+        return inpaint(input_image, mask, prompt, negative, seed, cfg, denoise, steps)
+
+    # Fallback: standard img2img
     n = _get_nodes()
     input_image = _resize_to_multiple(input_image)
     img_tensor = _pil_to_tensor(input_image)

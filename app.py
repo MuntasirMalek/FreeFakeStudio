@@ -139,10 +139,22 @@ def do_img2img(model_name, input_image, prompt, negative,
     seed = make_seed(seed)
     engine = _ensure_model(model_name)
 
+    # FLUX models are generators, not editors — they can't follow edit instructions.
+    # Auto-detect background mask so the subject/face is physically preserved
+    # and only the background is regenerated according to the prompt.
+    # Qwen-Image-Edit is a true editing model, so it doesn't need masks.
+    mask = None
+    if model_name in ("🔮 FLUX.2-klein 9B", "🌊 FLUX.2-klein 4B"):
+        mask = auto_mask_background(input_image)
+
     paths = []
     for i in range(int(num_images)):
-        img = engine.img2img(input_image, prompt, negative,
-                             seed + i, cfg, denoise, int(steps))
+        if mask is not None:
+            img = engine.img2img(input_image, prompt, negative,
+                                 seed + i, cfg, denoise, int(steps), mask=mask)
+        else:
+            img = engine.img2img(input_image, prompt, negative,
+                                 seed + i, cfg, denoise, int(steps))
         path = get_save_path("i2i")
         img.save(path)
         paths.append(path)

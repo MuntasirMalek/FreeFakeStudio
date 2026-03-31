@@ -146,20 +146,25 @@ def generate(prompt, negative, width, height, seed, cfg, denoise, steps=4):
 
 # ── Img2Img ────────────────────────────────────────────────
 @torch.inference_mode()
-def img2img(input_image, prompt, negative, seed, cfg, denoise, steps=4):
+def img2img(input_image, prompt, negative, seed, cfg, denoise, steps=4, mask=None):
+    """img2img with optional mask support.
+    If mask is provided (numpy uint8, 255=areas to regenerate), routes through
+    the inpaint pipeline which preserves unmasked regions pixel-perfectly.
+    FLUX Klein is a generator, not an editor — mask-based routing is essential
+    for edits like 'change the background' to preserve faces/subjects.
+    """
+    if mask is not None:
+        return inpaint(input_image, mask, prompt, negative, seed, cfg, denoise, steps)
+
+    # Fallback: standard img2img (for potential future editing models)
     n = _get_nodes()
     input_image = _resize_to_multiple(input_image)
     img_tensor = _pil_to_tensor(input_image)
     pos = n["CLIPTextEncode"].encode(_clip, prompt)[0]
     neg = n["CLIPTextEncode"].encode(_clip, negative)[0]
     latent = n["VAEEncode"].encode(_vae, img_tensor)[0]
-
-    # For distilled models with few native steps, we need more total steps
-    # so partial denoise leaves enough original structure intact.
-    # Cap denoise to prevent the input image from being completely destroyed.
     effective_steps = max(int(steps), 20)
     effective_denoise = min(float(denoise), 0.55)
-
     samples = n["KSampler"].sample(
         _unet, seed, effective_steps, float(cfg),
         "euler", "sgm_uniform", pos, neg, latent, denoise=effective_denoise
