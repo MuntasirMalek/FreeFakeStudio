@@ -133,39 +133,32 @@ def generate_image(model_name, prompt, negative, aspect_ratio,
 
 # ── IMG2IMG ────────────────────────────────────────────────
 def _select_mask_for_prompt(prompt, image_pil):
-    """Select the right mask based on what the user wants to change.
-    FLUX Klein is a generator, not an editor — img2img MUST route through
-    inpaint with a mask. The mask determines what gets preserved vs regenerated.
+    """Select the right mask and denoise based on what the user wants to change.
 
-    Returns: (mask_numpy, cleaned_prompt)
+    Returns: (mask_numpy, cleaned_prompt, denoise_override)
     """
     import re
     p = prompt.lower().strip()
 
-    # Background edits → mask background (preserve person entirely)
+    # Background edits → mask background, denoise=1.0 (full regeneration)
     bg_keywords = r'\b(background|backdrop|bg|behind|surroundings|scenery|scene)\b'
     if re.search(bg_keywords, p):
         mask = auto_mask_background(image_pil)
-        # Clean editing instruction into descriptive prompt
         pattern = r'^(?:change|make|turn|set|replace|convert)\s+(?:the\s+)?(?:background|bg|backdrop)\s+(?:to|into|with)\s+'
         cleaned = re.sub(pattern, '', prompt.strip(), flags=re.IGNORECASE).strip()
         if cleaned and cleaned != prompt.strip():
             cleaned = f"{cleaned} background"
         else:
             cleaned = prompt
-        print(f"🎯 Background edit → mask background, prompt: '{cleaned}'")
-        return mask, cleaned
+        print(f"🎯 Background edit → denoise=1.0, prompt: '{cleaned}'")
+        return mask, cleaned, 1.0
 
-    # Everything else (dress, hair, clothes, style, etc.)
-    # → mask ONLY body/clothing by combining two masks:
-    #   (everything except face) AND (NOT background) = clothing only
-    #   This preserves BOTH face AND background, only changes the clothing/body.
-    except_face = auto_mask_except_face(image_pil)  # 255 = everything except face
-    background = auto_mask_background(image_pil)     # 255 = background
-    # Clothing = masked by except_face BUT not masked by background
+    # Clothing/body edits → mask clothing only, denoise=0.55 (preserve shape)
+    except_face = auto_mask_except_face(image_pil)
+    background = auto_mask_background(image_pil)
     clothing_mask = np.where((except_face > 127) & (background < 127), 255, 0).astype(np.uint8)
-    print(f"🎯 Clothing/body edit → mask clothing only, prompt: '{prompt}'")
-    return clothing_mask, prompt
+    print(f"🎯 Clothing edit → denoise=0.55 (shape-preserving), prompt: '{prompt}'")
+    return clothing_mask, prompt, 0.55
 
 def do_img2img(model_name, input_image, prompt, negative,
                seed, cfg, denoise, num_images, steps):
@@ -174,18 +167,17 @@ def do_img2img(model_name, input_image, prompt, negative,
     seed = make_seed(seed)
     engine = _ensure_model(model_name)
 
-    # FLUX models MUST route through inpaint — standard img2img always fails
-    # because they're generators, not editors.
     mask = None
     img_prompt = prompt
+    effective_denoise = denoise
     if model_name in ("🔮 FLUX.2-klein 9B", "🌊 FLUX.2-klein 4B"):
-        mask, img_prompt = _select_mask_for_prompt(prompt, input_image)
+        mask, img_prompt, effective_denoise = _select_mask_for_prompt(prompt, input_image)
 
     paths = []
     for i in range(int(num_images)):
         if mask is not None:
             img = engine.img2img(input_image, img_prompt, negative,
-                                 seed + i, cfg, denoise, int(steps), mask=mask)
+                                 seed + i, cfg, effective_denoise, int(steps), mask=mask)
         else:
             img = engine.img2img(input_image, img_prompt, negative,
                                  seed + i, cfg, denoise, int(steps))

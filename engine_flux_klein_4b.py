@@ -117,7 +117,7 @@ def img2img(input_image, prompt, negative, seed, cfg, denoise, steps=20, mask=No
     the inpaint pipeline which preserves unmasked regions pixel-perfectly.
     """
     if mask is not None:
-        return inpaint(input_image, mask, prompt, negative, seed, cfg, 1.0, 8)
+        return inpaint(input_image, mask, prompt, negative, seed, cfg, float(denoise), 8)
 
     # Fallback: standard img2img
     n = _get_nodes()

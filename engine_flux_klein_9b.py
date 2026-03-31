@@ -154,10 +154,10 @@ def img2img(input_image, prompt, negative, seed, cfg, denoise, steps=4, mask=Non
     for edits like 'change the background' to preserve faces/subjects.
     """
     if mask is not None:
-        # Use denoise=1.0 so the masked area is generated 100% from the prompt.
-        # At 0.75, 25% of the original latent bleeds through (e.g. red stays red).
-        # Face is safe — it's physically composited back from the original at the end.
-        return inpaint(input_image, mask, prompt, negative, seed, cfg, 1.0, 8)
+        # Route through inpaint. Denoise is controlled by the caller:
+        # - Background edits: caller sends high denoise (1.0) for full regeneration
+        # - Clothing edits: caller sends lower denoise (~0.55) to preserve shape
+        return inpaint(input_image, mask, prompt, negative, seed, cfg, float(denoise), 8)
 
     # Fallback: standard img2img — still cap steps for distilled model
     n = _get_nodes()
