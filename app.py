@@ -153,12 +153,14 @@ def _select_mask_for_prompt(prompt, image_pil):
         print(f"🎯 Background edit → denoise=1.0, prompt: '{cleaned}'")
         return mask, cleaned, 1.0
 
-    # Clothing/body edits → mask clothing only, denoise=0.55 (preserve shape)
+    # Clothing/body edits → mask clothing only, denoise=0.75
+    # Note: FLUX Klein is a generator, not an editor. For precise clothing edits,
+    # Qwen-Image-Edit gives far better results since it understands editing instructions.
     except_face = auto_mask_except_face(image_pil)
     background = auto_mask_background(image_pil)
     clothing_mask = np.where((except_face > 127) & (background < 127), 255, 0).astype(np.uint8)
-    print(f"🎯 Clothing edit → denoise=0.55 (shape-preserving), prompt: '{prompt}'")
-    return clothing_mask, prompt, 0.55
+    print(f"🎯 Clothing edit → denoise=0.75, prompt: '{prompt}'")
+    return clothing_mask, prompt, 0.75
 
 def do_img2img(model_name, input_image, prompt, negative,
                seed, cfg, denoise, num_images, steps):
