@@ -132,6 +132,23 @@ def generate_image(model_name, prompt, negative, aspect_ratio,
     return paths, paths, str(seed)
 
 # ── IMG2IMG ────────────────────────────────────────────────
+def _clean_prompt_for_generator(prompt):
+    """Convert editing instructions to descriptive prompts for generative models.
+    FLUX Klein is a generator — it doesn't understand 'change X to Y'.
+    It needs descriptive prompts like 'green background, studio photo'.
+    """
+    import re
+    cleaned = prompt.strip()
+    # Strip common editing instruction prefixes
+    # "change the background to green" → "green"
+    # "make the background a tropical beach" → "a tropical beach"
+    pattern = r'^(?:change|make|turn|set|replace|convert)\s+(?:the\s+)?(?:background|bg|backdrop)\s+(?:to|into|with)\s+'
+    stripped = re.sub(pattern, '', cleaned, flags=re.IGNORECASE).strip()
+    if stripped and stripped != cleaned:
+        # Successfully stripped an editing prefix — make it descriptive
+        return f"{stripped} background"
+    return cleaned
+
 def do_img2img(model_name, input_image, prompt, negative,
                seed, cfg, denoise, num_images, steps):
     if input_image is None:
@@ -142,18 +159,21 @@ def do_img2img(model_name, input_image, prompt, negative,
     # FLUX models are generators, not editors — they can't follow edit instructions.
     # Auto-detect background mask so the subject/face is physically preserved
     # and only the background is regenerated according to the prompt.
-    # Qwen-Image-Edit is a true editing model, so it doesn't need masks.
+    # Also clean the prompt from editing instructions to descriptive form.
     mask = None
+    img_prompt = prompt
     if model_name in ("🔮 FLUX.2-klein 9B", "🌊 FLUX.2-klein 4B"):
         mask = auto_mask_background(input_image)
+        img_prompt = _clean_prompt_for_generator(prompt)
+        print(f"🔄 Prompt cleaned: '{prompt}' → '{img_prompt}'")
 
     paths = []
     for i in range(int(num_images)):
         if mask is not None:
-            img = engine.img2img(input_image, prompt, negative,
+            img = engine.img2img(input_image, img_prompt, negative,
                                  seed + i, cfg, denoise, int(steps), mask=mask)
         else:
-            img = engine.img2img(input_image, prompt, negative,
+            img = engine.img2img(input_image, img_prompt, negative,
                                  seed + i, cfg, denoise, int(steps))
         path = get_save_path("i2i")
         img.save(path)
@@ -450,7 +470,7 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="FreeFakeStudio") as demo:
                                              label="Model")
                     i2i_img = gr.Image(type="pil", label="Upload Photo", sources=["upload"])
                     i2i_prompt = gr.Textbox(label="Prompt / Edit Instruction", lines=2,
-                        placeholder="e.g., change the dress to red")
+                        placeholder="e.g., green background, tropical beach, studio lighting")
                     i2i_num = gr.Slider(1, 16, value=2, step=1, label="Number of Images")
                     i2i_steps = gr.Slider(1, 50, value=20, step=1, label="Steps")
                     i2i_btn = gr.Button("✨ Transform", variant="primary", size="lg")

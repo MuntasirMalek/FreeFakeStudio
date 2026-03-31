@@ -154,7 +154,11 @@ def img2img(input_image, prompt, negative, seed, cfg, denoise, steps=4, mask=Non
     for edits like 'change the background' to preserve faces/subjects.
     """
     if mask is not None:
-        return inpaint(input_image, mask, prompt, negative, seed, cfg, denoise, steps)
+        # Inpainting needs higher denoise to fully regenerate masked areas.
+        # Low denoise (e.g. 0.45) just barely modifies the original pixels.
+        inpaint_denoise = max(float(denoise), 0.75)
+        inpaint_steps = max(int(steps), 8)
+        return inpaint(input_image, mask, prompt, negative, seed, cfg, inpaint_denoise, inpaint_steps)
 
     # Fallback: standard img2img (for potential future editing models)
     n = _get_nodes()
