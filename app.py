@@ -132,20 +132,19 @@ def generate_image(model_name, prompt, negative, aspect_ratio,
     return paths, paths, str(seed)
 
 # ── IMG2IMG ────────────────────────────────────────────────
+def _is_background_prompt(prompt):
+    """Check if the prompt is about changing the background."""
+    import re
+    bg_keywords = r'\b(background|backdrop|bg|behind|surroundings|scenery|scene)\b'
+    return bool(re.search(bg_keywords, prompt, re.IGNORECASE))
+
 def _clean_prompt_for_generator(prompt):
-    """Convert editing instructions to descriptive prompts for generative models.
-    FLUX Klein is a generator — it doesn't understand 'change X to Y'.
-    It needs descriptive prompts like 'green background, studio photo'.
-    """
+    """Convert editing instructions to descriptive prompts for generative models."""
     import re
     cleaned = prompt.strip()
-    # Strip common editing instruction prefixes
-    # "change the background to green" → "green"
-    # "make the background a tropical beach" → "a tropical beach"
     pattern = r'^(?:change|make|turn|set|replace|convert)\s+(?:the\s+)?(?:background|bg|backdrop)\s+(?:to|into|with)\s+'
     stripped = re.sub(pattern, '', cleaned, flags=re.IGNORECASE).strip()
     if stripped and stripped != cleaned:
-        # Successfully stripped an editing prefix — make it descriptive
         return f"{stripped} background"
     return cleaned
 
@@ -156,16 +155,18 @@ def do_img2img(model_name, input_image, prompt, negative,
     seed = make_seed(seed)
     engine = _ensure_model(model_name)
 
-    # FLUX models are generators, not editors — they can't follow edit instructions.
-    # Auto-detect background mask so the subject/face is physically preserved
-    # and only the background is regenerated according to the prompt.
-    # Also clean the prompt from editing instructions to descriptive form.
+    # For FLUX models (generators, not editors):
+    # - Background prompts → auto-mask background + inpaint (preserves face)
+    # - Other prompts (dress, hair, etc.) → standard img2img
     mask = None
     img_prompt = prompt
     if model_name in ("🔮 FLUX.2-klein 9B", "🌊 FLUX.2-klein 4B"):
-        mask = auto_mask_background(input_image)
-        img_prompt = _clean_prompt_for_generator(prompt)
-        print(f"🔄 Prompt cleaned: '{prompt}' → '{img_prompt}'")
+        if _is_background_prompt(prompt):
+            mask = auto_mask_background(input_image)
+            img_prompt = _clean_prompt_for_generator(prompt)
+            print(f"🔄 Background edit detected — mask applied, prompt: '{prompt}' → '{img_prompt}'")
+        else:
+            print(f"ℹ️ Non-background edit — using standard img2img: '{prompt}'")
 
     paths = []
     for i in range(int(num_images)):
