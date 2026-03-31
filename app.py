@@ -132,21 +132,35 @@ def generate_image(model_name, prompt, negative, aspect_ratio,
     return paths, paths, str(seed)
 
 # ── IMG2IMG ────────────────────────────────────────────────
-def _is_background_prompt(prompt):
-    """Check if the prompt is about changing the background."""
-    import re
-    bg_keywords = r'\b(background|backdrop|bg|behind|surroundings|scenery|scene)\b'
-    return bool(re.search(bg_keywords, prompt, re.IGNORECASE))
+def _select_mask_for_prompt(prompt, image_pil):
+    """Select the right mask based on what the user wants to change.
+    FLUX Klein is a generator, not an editor — img2img MUST route through
+    inpaint with a mask. The mask determines what gets preserved vs regenerated.
 
-def _clean_prompt_for_generator(prompt):
-    """Convert editing instructions to descriptive prompts for generative models."""
+    Returns: (mask_numpy, cleaned_prompt)
+    """
     import re
-    cleaned = prompt.strip()
-    pattern = r'^(?:change|make|turn|set|replace|convert)\s+(?:the\s+)?(?:background|bg|backdrop)\s+(?:to|into|with)\s+'
-    stripped = re.sub(pattern, '', cleaned, flags=re.IGNORECASE).strip()
-    if stripped and stripped != cleaned:
-        return f"{stripped} background"
-    return cleaned
+    p = prompt.lower().strip()
+
+    # Background edits → mask background (preserve person entirely)
+    bg_keywords = r'\b(background|backdrop|bg|behind|surroundings|scenery|scene)\b'
+    if re.search(bg_keywords, p):
+        mask = auto_mask_background(image_pil)
+        # Clean editing instruction into descriptive prompt
+        pattern = r'^(?:change|make|turn|set|replace|convert)\s+(?:the\s+)?(?:background|bg|backdrop)\s+(?:to|into|with)\s+'
+        cleaned = re.sub(pattern, '', prompt.strip(), flags=re.IGNORECASE).strip()
+        if cleaned and cleaned != prompt.strip():
+            cleaned = f"{cleaned} background"
+        else:
+            cleaned = prompt
+        print(f"🎯 Background edit → mask background, prompt: '{cleaned}'")
+        return mask, cleaned
+
+    # Everything else (dress, hair, clothes, style, etc.)
+    # → mask everything except face (preserve face, regenerate body/clothes/bg)
+    mask = auto_mask_except_face(image_pil)
+    print(f"🎯 Non-background edit → mask except face, prompt: '{prompt}'")
+    return mask, prompt
 
 def do_img2img(model_name, input_image, prompt, negative,
                seed, cfg, denoise, num_images, steps):
@@ -155,18 +169,12 @@ def do_img2img(model_name, input_image, prompt, negative,
     seed = make_seed(seed)
     engine = _ensure_model(model_name)
 
-    # For FLUX models (generators, not editors):
-    # - Background prompts → auto-mask background + inpaint (preserves face)
-    # - Other prompts (dress, hair, etc.) → standard img2img
+    # FLUX models MUST route through inpaint — standard img2img always fails
+    # because they're generators, not editors.
     mask = None
     img_prompt = prompt
     if model_name in ("🔮 FLUX.2-klein 9B", "🌊 FLUX.2-klein 4B"):
-        if _is_background_prompt(prompt):
-            mask = auto_mask_background(input_image)
-            img_prompt = _clean_prompt_for_generator(prompt)
-            print(f"🔄 Background edit detected — mask applied, prompt: '{prompt}' → '{img_prompt}'")
-        else:
-            print(f"ℹ️ Non-background edit — using standard img2img: '{prompt}'")
+        mask, img_prompt = _select_mask_for_prompt(prompt, input_image)
 
     paths = []
     for i in range(int(num_images)):
