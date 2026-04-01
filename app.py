@@ -22,7 +22,7 @@ import engine_qwen_edit_2511
 _current_model = None
 
 MODEL_GEN = ["⚡ Z-Image Turbo", "🔮 FLUX.2-klein 9B", "🌊 FLUX.2-klein 4B"]
-MODEL_EDIT = ["🎨 Qwen-Image-Edit", "⚡ Z-Image Turbo", "🔮 FLUX.2-klein 9B", "🌊 FLUX.2-klein 4B"]
+MODEL_EDIT = ["🎨 Qwen-Image-Edit", "🔮 FLUX.2-klein 9B", "🌊 FLUX.2-klein 4B"]
 
 _ENGINE_MAP = {
     "⚡ Z-Image Turbo": engine_z_image,
@@ -172,7 +172,7 @@ def do_img2img(model_name, input_image, prompt, negative,
     mask = None
     img_prompt = prompt
     effective_denoise = denoise
-    if model_name in ("🔮 FLUX.2-klein 9B", "🌊 FLUX.2-klein 4B", "⚡ Z-Image Turbo"):
+    if model_name in ("🔮 FLUX.2-klein 9B", "🌊 FLUX.2-klein 4B"):
         mask, img_prompt, effective_denoise = _select_mask_for_prompt(prompt, input_image)
 
     paths = []
