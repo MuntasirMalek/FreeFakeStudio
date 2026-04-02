@@ -42,6 +42,8 @@ Choose to download any or all of the following models on startup:
 
 ## Credits
 
+- [FLUX.2](https://github.com/black-forest-labs/flux2) by black-forest-labs
+- [Qwen-Image](https://github.com/QwenLM/Qwen-Image) by QwenLM
 - [Z-Image](https://github.com/Tongyi-MAI/Z-Image) by Tongyi-MAI
 - [Fooocus](https://github.com/lllyasviel/Fooocus) by lllyasviel — UI layout inspiration
 - [ComfyUI](https://github.com/comfyanonymous/ComfyUI) — backend engine powering all workflows
