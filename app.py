@@ -618,7 +618,7 @@ _model_files = {
     "⚡ Z-Image Turbo":   "z-image-turbo-fp8-e4m3fn.safetensors",
     "🌊 FLUX.2-klein 4B": "flux-2-klein-4b.safetensors",
     "🔮 FLUX.2-klein 9B": "flux-2-klein-9b-kv-fp8.safetensors",
-    "🖌️ ERNIE-Image Turbo": "ernie-image-turbo-Q6_K.gguf",
+    "🖌️ ERNIE-Image Turbo": "ernie-image-turbo-Q8_0.gguf",
 }
 _diff_dir = "/content/ComfyUI/models/diffusion_models"
 for _name, _file in _model_files.items():
