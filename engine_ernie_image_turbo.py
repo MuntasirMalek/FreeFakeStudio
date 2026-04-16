@@ -60,7 +60,7 @@ def load():
     if _loaded:
         return
     n = _get_nodes()
-    print("⏳ Loading ERNIE-Image-Turbo (GGUF Q4_K_M)...")
+    print("⏳ Loading ERNIE-Image-Turbo (GGUF Q6_K)...")
     with torch.inference_mode():
         _unet = n["UnetLoaderGGUF"].load_unet("ernie-image-turbo-Q6_K.gguf")[0]
         _clip = n["CLIPLoader"].load_clip("ministral-3-3b.safetensors", type="ernie_image")[0]
