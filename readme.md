@@ -1,6 +1,6 @@
 # 🎭 FreeFakeStudio
 
-**Open-source Multi-Model AI Image Studio** — Generate, Img2Img & Inpaint with FLUX, Qwen, Z-Image and many more to come. Zero-setup for Google Colab.
+**Open-source Multi-Model AI Image Studio** — Generate, Img2Img & Inpaint with FLUX, Qwen, Z-Image, ERNIE-Image and many more to come. Zero-setup for Google Colab.
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/MuntasirMalek/FreeFakeStudio/blob/main/FreeFakeStudio.ipynb)
 
@@ -10,7 +10,7 @@ Multiple state-of-the-art models in one unified studio. No local installation re
 
 | Tab | What it does |
 |-----|--------------|
-| 🖼️ **Generate** | Text → high-quality image (Supports Z-Image Turbo, FLUX.2) |
+| 🖼️ **Generate** | Text → high-quality image (Supports Z-Image Turbo, FLUX.2, ERNIE-Image Turbo) |
 | ✏️ **Img2Img** | Upload photo + prompt → restyled image |
 | 🎨 **Inpaint** | Paint mask on photo → only painted area gets regenerated |
 
@@ -39,12 +39,14 @@ Choose to download any or all of the following models on startup:
 | **FLUX.2-klein 4B** | ~11 GB | Excellent photorealism and general purpose Inpaint/Img2Img |
 | **FLUX.2-klein 9B Hybrid** | ~13 GB | Original 10GB FP8 UNET + GGUF text encoder for maximum detail |
 | **Qwen-Image-Edit-2511** | ~15 GB | Instruction-based conversational Img2Img & Inpaint |
+| **ERNIE-Image-Turbo** | ~9 GB | Fast text-to-image by Baidu (8 steps, strong text rendering & instruction following) |
 
 ## Credits
 
 - [FLUX.2](https://github.com/black-forest-labs/flux2) by black-forest-labs
 - [Qwen-Image](https://github.com/QwenLM/Qwen-Image) by QwenLM
 - [Z-Image](https://github.com/Tongyi-MAI/Z-Image) by Tongyi-MAI
+- [ERNIE-Image](https://huggingface.co/baidu/ERNIE-Image-Turbo) by Baidu
 - [Fooocus](https://github.com/lllyasviel/Fooocus) by lllyasviel — UI layout inspiration
 - [ComfyUI](https://github.com/comfyanonymous/ComfyUI) — backend engine powering all workflows
 
@@ -53,4 +55,4 @@ Choose to download any or all of the following models on startup:
 Apache-2.0
 
 ---
-*Keywords: AI Image Generation, Free Image Editor, Google Colab VRAM 15GB, FLUX.2, FLUX Inpainting, Qwen-Image-Edit conversational AI, Z-Image Turbo, Fooocus Alternative, ComfyUI backend, Zero Setup, T4 GPU, Open Source Image Studio, Gradio App*
+*Keywords: AI Image Generation, Free Image Editor, Google Colab VRAM 15GB, FLUX.2, FLUX Inpainting, Qwen-Image-Edit conversational AI, Z-Image Turbo, ERNIE-Image-Turbo, Fooocus Alternative, ComfyUI backend, Zero Setup, T4 GPU, Open Source Image Studio, Gradio App*

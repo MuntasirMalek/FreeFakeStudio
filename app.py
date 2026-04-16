@@ -1,6 +1,6 @@
 # ============================================================
 #  FreeFakeStudio — Multi-Model AI Image Studio
-#  Models: Z-Image Turbo · FLUX.2-klein · Qwen-Image-Edit
+#  Models: Z-Image Turbo · FLUX.2-klein · Qwen-Image-Edit · ERNIE-Image-Turbo
 #  Built for Google Colab T4 (15GB VRAM)
 # ============================================================
 
@@ -17,11 +17,12 @@ import engine_z_image
 import engine_flux_klein_9b
 import engine_flux_klein_4b
 import engine_qwen_edit_2511
+import engine_ernie_image_turbo
 
 # ── Model Manager ─────────────────────────────────────────
 _current_model = None
 
-MODEL_GEN = ["⚡ Z-Image Turbo", "🔮 FLUX.2-klein 9B", "🌊 FLUX.2-klein 4B"]
+MODEL_GEN = ["⚡ Z-Image Turbo", "🔮 FLUX.2-klein 9B", "🌊 FLUX.2-klein 4B", "🖌️ ERNIE-Image Turbo"]
 MODEL_EDIT = ["🎨 Qwen-Image-Edit", "🔮 FLUX.2-klein 9B", "🌊 FLUX.2-klein 4B"]
 
 _ENGINE_MAP = {
@@ -29,6 +30,7 @@ _ENGINE_MAP = {
     "🔮 FLUX.2-klein 9B":  engine_flux_klein_9b,
     "🌊 FLUX.2-klein 4B":  engine_flux_klein_4b,
     "🎨 Qwen-Image-Edit": engine_qwen_edit_2511,
+    "🖌️ ERNIE-Image Turbo": engine_ernie_image_turbo,
 }
 
 def _ensure_model(model_name):
@@ -616,6 +618,7 @@ _model_files = {
     "⚡ Z-Image Turbo":   "z-image-turbo-fp8-e4m3fn.safetensors",
     "🌊 FLUX.2-klein 4B": "flux-2-klein-4b.safetensors",
     "🔮 FLUX.2-klein 9B": "flux-2-klein-9b-kv-fp8.safetensors",
+    "🖌️ ERNIE-Image Turbo": "ernie-image-turbo-Q4_K_M.gguf",
 }
 _diff_dir = "/content/ComfyUI/models/diffusion_models"
 for _name, _file in _model_files.items():
