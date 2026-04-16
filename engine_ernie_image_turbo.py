@@ -17,40 +17,40 @@ def _get_nodes():
     global _nodes
     if not _nodes:
         import sys
-        sys.path.insert(0, "/content/ComfyUI")
+        if "/content/ComfyUI" not in sys.path:
+            sys.path.insert(0, "/content/ComfyUI")
         from nodes import NODE_CLASS_MAPPINGS
 
-        # Standard ComfyUI nodes
-        _nodes = {
-            "CLIPLoader":       NODE_CLASS_MAPPINGS["CLIPLoader"](),
-            "VAELoader":        NODE_CLASS_MAPPINGS["VAELoader"](),
-            "CLIPTextEncode":   NODE_CLASS_MAPPINGS["CLIPTextEncode"](),
-            "KSampler":         NODE_CLASS_MAPPINGS["KSampler"](),
-            "VAEDecode":        NODE_CLASS_MAPPINGS["VAEDecode"](),
-            "EmptyLatentImage": NODE_CLASS_MAPPINGS["EmptyLatentImage"](),
-        }
-
-        # ComfyUI-GGUF node for loading GGUF diffusion model
+        # Import ComfyUI-GGUF nodes via importlib (same approach as Qwen engine)
         try:
-            import nodes
-            if hasattr(nodes, "init_extra_nodes"):
-                nodes.init_extra_nodes()
-            from nodes import NODE_CLASS_MAPPINGS as ALL_NODES
-            if "UnetLoaderGGUF" in ALL_NODES:
-                _nodes["UnetLoaderGGUF"] = ALL_NODES["UnetLoaderGGUF"]()
+            import importlib
+            gguf_module = importlib.import_module("custom_nodes.ComfyUI-GGUF.nodes")
+            gguf_mappings = gguf_module.NODE_CLASS_MAPPINGS if hasattr(gguf_module, 'NODE_CLASS_MAPPINGS') else {}
         except Exception:
-            pass
-
-        if "UnetLoaderGGUF" not in _nodes:
             try:
-                from custom_nodes.ComfyUI_GGUF.nodes import UnetLoaderGGUF
-                _nodes["UnetLoaderGGUF"] = UnetLoaderGGUF()
-            except ImportError:
-                raise RuntimeError(
-                    "ComfyUI-GGUF custom nodes not found! "
-                    "Install them: git clone https://github.com/city96/ComfyUI-GGUF.git "
-                    "/content/ComfyUI/custom_nodes/ComfyUI-GGUF"
-                )
+                from custom_nodes import ComfyUI_GGUF
+                gguf_mappings = ComfyUI_GGUF.NODE_CLASS_MAPPINGS
+            except Exception:
+                gguf_mappings = {}
+
+        all_nodes = {**NODE_CLASS_MAPPINGS, **gguf_mappings}
+
+        if "UnetLoaderGGUF" not in all_nodes:
+            raise RuntimeError(
+                "ComfyUI-GGUF custom nodes not found! "
+                "Install them: git clone https://github.com/city96/ComfyUI-GGUF.git "
+                "/content/ComfyUI/custom_nodes/ComfyUI-GGUF"
+            )
+
+        _nodes = {
+            "UnetLoaderGGUF":   all_nodes["UnetLoaderGGUF"](),
+            "CLIPLoader":       all_nodes["CLIPLoader"](),
+            "VAELoader":        all_nodes["VAELoader"](),
+            "CLIPTextEncode":   all_nodes["CLIPTextEncode"](),
+            "KSampler":         all_nodes["KSampler"](),
+            "VAEDecode":        all_nodes["VAEDecode"](),
+            "EmptyLatentImage": all_nodes["EmptyLatentImage"](),
+        }
 
     return _nodes
 
