@@ -62,7 +62,7 @@ def load():
     n = _get_nodes()
     print("⏳ Loading ERNIE-Image-Turbo (GGUF Q4_K_M)...")
     with torch.inference_mode():
-        _unet = n["UnetLoaderGGUF"].load_unet("ernie-image-turbo-Q4_K_M.gguf")[0]
+        _unet = n["UnetLoaderGGUF"].load_unet("ernie-image-turbo-Q6_K.gguf")[0]
         _clip = n["CLIPLoader"].load_clip("ministral-3-3b.safetensors", type="ernie_image")[0]
         _vae  = n["VAELoader"].load_vae("flux2-vae.safetensors")[0]
     _loaded = True
