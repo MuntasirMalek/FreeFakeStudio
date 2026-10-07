@@ -652,3 +652,49 @@ body {
     height: calc(100vh - 160px);
   }
 }
+
+/* ── Minimal Launcher ────────────────────────────────────── */
+.minimal-launcher {
+  max-width: 520px;
+  margin: 40px auto 0;
+  text-align: center;
+}
+
+.minimal-title {
+  font-size: 2.2rem;
+  font-weight: 900;
+  margin-bottom: 24px;
+  letter-spacing: -0.03em;
+}
+
+.launcher-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  padding: 32px 24px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.btn-giant {
+  padding: 22px 32px;
+  font-size: 1.35rem;
+  font-weight: 900;
+  border-radius: var(--radius-lg);
+  letter-spacing: 0.02em;
+}
+
+.quick-connect {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border-color);
+}
+
+.text-input-sm {
+  font-size: 0.8rem;
+  padding: 8px 12px;
+}
