@@ -435,6 +435,23 @@ body {
   transform: translateY(-1px);
 }
 
+.btn-pulse {
+  animation: pulse-glow 2.2s infinite;
+  letter-spacing: 0.02em;
+}
+
+@keyframes pulse-glow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 16px rgba(37, 99, 235, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0);
+  }
+}
+
 .btn-secondary {
   background: #334155;
   color: var(--text-main);
