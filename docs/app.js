@@ -16,17 +16,8 @@
   const openNewtabBtn = document.getElementById('open-newtab-btn');
   const switchEngineBtn = document.getElementById('switch-engine-btn');
 
-  // Metrics & Presets
-  const metricsCount = document.getElementById('metrics-model-count');
-  const metricsSize = document.getElementById('metrics-download-size');
-  const metricsTime = document.getElementById('metrics-boot-time');
-
-  const presetFast = document.getElementById('preset-fast');
-  const presetFlux = document.getElementById('preset-flux');
-  const presetEdit = document.getElementById('preset-edit');
-  const presetAll = document.getElementById('preset-all');
-  const presetChips = [presetFast, presetFlux, presetEdit, presetAll].filter(Boolean);
-
+  const selectFastBtn = document.getElementById('select-fast-btn');
+  const selectAllBtn = document.getElementById('select-all-btn');
   const modelCheckboxes = document.querySelectorAll('input[name="model"]');
 
   const STORAGE_KEY = 'freefake_backend_url';
@@ -35,10 +26,8 @@
   // Initialize
   function init() {
     setupModelCheckboxes();
-    setupPresetButtons();
     setupListeners();
     checkConnection();
-    updateMetrics();
   }
 
   function setupModelCheckboxes() {
@@ -61,74 +50,39 @@
           cb.checked = true;
         }
         updateCardStyle(cb);
-        clearActivePreset();
+        if (selectFastBtn) selectFastBtn.classList.remove('active');
+        if (selectAllBtn) selectAllBtn.classList.remove('active');
         saveSelectedModels();
-        updateMetrics();
       });
     });
-  }
 
-  function setupPresetButtons() {
-    if (presetFast) {
-      presetFast.addEventListener('click', () => {
-        setActivePreset(presetFast);
+    if (selectFastBtn) {
+      selectFastBtn.addEventListener('click', () => {
         modelCheckboxes.forEach((cb) => {
           cb.checked = (cb.value === '⚡ Z-Image Turbo');
           updateCardStyle(cb);
         });
+        selectFastBtn.classList.add('active');
+        if (selectAllBtn) selectAllBtn.classList.remove('active');
         saveSelectedModels();
-        updateMetrics();
       });
     }
 
-    if (presetFlux) {
-      presetFlux.addEventListener('click', () => {
-        setActivePreset(presetFlux);
-        modelCheckboxes.forEach((cb) => {
-          cb.checked = (cb.value === '🌊 FLUX.2-klein 4B' || cb.value === '🔮 FLUX.2-klein 9B');
-          updateCardStyle(cb);
-        });
-        saveSelectedModels();
-        updateMetrics();
-      });
-    }
-
-    if (presetEdit) {
-      presetEdit.addEventListener('click', () => {
-        setActivePreset(presetEdit);
-        modelCheckboxes.forEach((cb) => {
-          cb.checked = (cb.value === '🎨 Qwen-Image-Edit' || cb.value === '⚡ Z-Image Turbo');
-          updateCardStyle(cb);
-        });
-        saveSelectedModels();
-        updateMetrics();
-      });
-    }
-
-    if (presetAll) {
-      presetAll.addEventListener('click', () => {
-        setActivePreset(presetAll);
+    if (selectAllBtn) {
+      selectAllBtn.addEventListener('click', () => {
         modelCheckboxes.forEach((cb) => {
           cb.checked = true;
           updateCardStyle(cb);
         });
+        selectAllBtn.classList.add('active');
+        if (selectFastBtn) selectFastBtn.classList.remove('active');
         saveSelectedModels();
-        updateMetrics();
       });
     }
   }
 
-  function setActivePreset(activeChip) {
-    presetChips.forEach(chip => chip.classList.remove('active'));
-    if (activeChip) activeChip.classList.add('active');
-  }
-
-  function clearActivePreset() {
-    presetChips.forEach(chip => chip.classList.remove('active'));
-  }
-
   function updateCardStyle(cb) {
-    const parent = cb.closest('.model-card');
+    const parent = cb.closest('.model-checkbox-item');
     if (parent) {
       if (cb.checked) {
         parent.classList.add('checked');
@@ -136,32 +90,6 @@
         parent.classList.remove('checked');
       }
     }
-  }
-
-  function updateMetrics() {
-    let count = 0;
-    let totalSize = 0;
-    let totalTime = 0;
-
-    modelCheckboxes.forEach((cb) => {
-      if (cb.checked) {
-        count++;
-        const card = cb.closest('.model-card');
-        if (card) {
-          const s = parseFloat(card.getAttribute('data-size')) || 0;
-          const t = parseFloat(card.getAttribute('data-time')) || 0;
-          totalSize += s;
-          totalTime = Math.max(totalTime, t); // parallel downloads overlap, so time scales gracefully
-        }
-      }
-    });
-
-    if (metricsCount) metricsCount.textContent = `${count} / ${modelCheckboxes.length}`;
-    if (metricsSize) metricsSize.textContent = `~${totalSize.toFixed(1)} GB`;
-    
-    // Estimate boot time based on total volume with aria2 1Gbps (~100MB/s) + 40s environment setup
-    const estMinutes = (totalSize / 5.5).toFixed(1);
-    if (metricsTime) metricsTime.textContent = `~${Math.max(1.2, parseFloat(estMinutes))} min`;
   }
 
   function saveSelectedModels() {
@@ -241,7 +169,7 @@
 
     if (frameLoader) {
       frameLoader.classList.remove('fade-out');
-      if (loaderStatus) loaderStatus.textContent = 'Connecting to FreeFakeStudio GPU Engine...';
+      if (loaderStatus) loaderStatus.textContent = 'Loading your FreeFakeStudio interface...';
     }
 
     if (studioIframe) {
