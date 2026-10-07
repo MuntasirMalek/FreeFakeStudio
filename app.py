@@ -442,19 +442,13 @@ JS_CUSTOM = """
     };
 })();
 
-// Override brush/eraser size slider max from default ~100 to 300
+// Override brush/eraser size slider max from default ~100 to 300 ONLY inside ImageEditor
 function boostBrushMax() {
-    document.querySelectorAll('input[type="range"]').forEach(function(slider) {
+    document.querySelectorAll('.image-editor input[type="range"], .image_editor input[type="range"]').forEach(function(slider) {
+        if (slider.closest('.gradio-slider')) return;
         if (parseFloat(slider.max) > 10 && parseFloat(slider.max) <= 110) {
-            var parent = slider.closest('.image-editor, .image_editor');
-            if (!parent) {
-                var labels = slider.closest('.block, .wrap, div');
-                if (labels && labels.querySelector('canvas')) parent = labels;
-            }
-            if (parent || slider.closest('[data-testid]')) {
-                slider.max = 300;
-                slider.setAttribute('max', '300');
-            }
+            slider.max = 300;
+            slider.setAttribute('max', '300');
         }
     });
 }
