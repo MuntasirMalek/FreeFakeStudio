@@ -2,7 +2,18 @@
 
 **Open-source Multi-Model AI Image Studio** — Generate, Img2Img & Inpaint with FLUX, Qwen, Z-Image, ERNIE-Image and many more to come. Zero-setup for Google Colab.
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/MuntasirMalek/FreeFakeStudio/blob/main/FreeFakeStudio.ipynb)
+[![Web App](https://img.shields.io/badge/🌐_Web_App-Live_Demo-3b82f6?style=for-the-badge)](https://muntasirmalek.github.io/FreeFakeStudio/)
+[![1-Click Colab](https://img.shields.io/badge/⚡_1--Click_Colab-T4_GPU-f59e0b?style=for-the-badge&logo=googlecolab)](https://colab.research.google.com/github/MuntasirMalek/FreeFakeStudio/blob/main/FreeFakeStudio_1Click.ipynb)
+[![Classic Colab](https://img.shields.io/badge/Open_In_Colab-Classic_Studio-2563eb?style=for-the-badge&logo=googlecolab)](https://colab.research.google.com/github/MuntasirMalek/FreeFakeStudio/blob/main/FreeFakeStudio.ipynb)
+
+---
+
+## 🚀 Choose Your Edition
+
+| Edition | Best For | How to Launch |
+| :--- | :--- | :--- |
+| 🌐 **1-Click Web Edition** *(New!)* | Beginners, Students & Classrooms | [Open Web App](https://muntasirmalek.github.io/FreeFakeStudio/) $\rightarrow$ Click 1-Button Run |
+| 📓 **Classic Colab Studio** | Advanced users who want manual control | [Open Notebook](https://colab.research.google.com/github/MuntasirMalek/FreeFakeStudio/blob/main/FreeFakeStudio.ipynb) $\rightarrow$ Step 1 & Step 2 |
 
 ## Features
 

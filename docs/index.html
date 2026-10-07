@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FreeFakeStudio — Free AI Image Studio</title>
+  <meta name="description" content="Free open-source multi-model AI image studio. Generate, edit, and inpaint with FLUX, Z-Image, and Qwen using free Google Colab GPU.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Header / Nav -->
+  <header class="navbar">
+    <div class="nav-container">
+      <div class="brand">
+        <span class="brand-icon">🎭</span>
+        <div class="brand-text">
+          <h1>FreeFakeStudio</h1>
+          <span class="badge">Web Edition</span>
+        </div>
+      </div>
+      <div class="nav-actions">
+        <div id="connection-status" class="status-pill status-disconnected">
+          <span class="status-dot"></span>
+          <span id="status-text">GPU Disconnected</span>
+        </div>
+        <button id="disconnect-btn" class="btn btn-sm btn-ghost hidden">Disconnect</button>
+        <a href="https://github.com/MuntasirMalek/FreeFakeStudio" target="_blank" class="github-link" title="View on GitHub">
+          <svg height="20" width="20" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+          </svg>
+          <span>GitHub</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="main-content">
+    
+    <!-- State 1: Launcher & Connector (Before GPU is connected) -->
+    <section id="launcher-view" class="view active">
+      <div class="hero">
+        <div class="hero-badge">✨ Beginner Friendly · 100% Free · Zero Setup</div>
+        <h2 class="hero-title">Create Stunning AI Art with <span class="gradient-text">Free GPU Power</span></h2>
+        <p class="hero-subtitle">
+          No coding, no expensive subscriptions, and no complicated setup. Run state-of-the-art models like <strong>Z-Image</strong> and <strong>FLUX.2</strong> using Google's free T4 GPU in the background.
+        </p>
+      </div>
+
+      <!-- 3-Step Visual Guide -->
+      <div class="steps-grid">
+        <div class="step-card">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <h3>Choose a Model</h3>
+            <p>Select which AI engine you want to start with below.</p>
+          </div>
+        </div>
+        <div class="step-card">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <h3>Click 1-Button Run</h3>
+            <p>Opens Colab with all code hidden. Click ▶️ <strong>Play</strong> once.</p>
+          </div>
+        </div>
+        <div class="step-card">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <h3>Create on This Website</h3>
+            <p>Click the big button in Colab to unlock your full studio right here!</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Card -->
+      <div class="launcher-card">
+        <div class="card-header">
+          <h3>🚀 Start Your Studio Engine</h3>
+          <p>Pick your model and launch your free Google cloud GPU.</p>
+        </div>
+
+        <div class="card-body">
+          <div class="form-group">
+            <label for="model-selector">Select AI Model</label>
+            <select id="model-selector" class="select-input">
+              <option value="z_image" selected>⚡ Z-Image Turbo — Fastest (8 steps, ~1 min download) [Recommended]</option>
+              <option value="flux_4b">🌊 FLUX.2-klein 4B — Photorealistic (General Purpose)</option>
+              <option value="flux_9b">🔮 FLUX.2-klein 9B — Maximum Detail & Quality</option>
+              <option value="qwen">🎨 Qwen-Image-Edit — Smart Conversational Image Editor</option>
+              <option value="ernie">🖌️ ERNIE-Image Turbo — Fast Text-to-Image (Baidu)</option>
+            </select>
+            <span class="input-hint" id="model-hint">⚡ Recommended for first-time users. Takes only ~1.5 minutes to boot on Colab.</span>
+          </div>
+
+          <div class="cta-actions">
+            <a id="colab-launch-btn" href="https://colab.research.google.com/github/MuntasirMalek/FreeFakeStudio/blob/main/FreeFakeStudio_1Click.ipynb" target="_blank" class="btn btn-primary btn-lg">
+              <span class="btn-icon">⚡</span>
+              <span>Launch Free GPU on Google Colab</span>
+            </a>
+          </div>
+
+          <div class="divider">
+            <span>OR CONNECT EXISTING SESSION</span>
+          </div>
+
+          <div class="manual-connect">
+            <label for="manual-url">Already have a running Colab session?</label>
+            <div class="input-group">
+              <input type="url" id="manual-url" placeholder="https://xxxxxxxx.gradio.live" class="text-input">
+              <button id="manual-connect-btn" class="btn btn-secondary">Connect</button>
+            </div>
+            <span class="input-hint">Paste the <code>*.gradio.live</code> URL output from your Colab notebook.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- FAQ / Help Section for Students -->
+      <div class="faq-section">
+        <h3>💡 Student Guide & FAQ</h3>
+        <div class="faq-grid">
+          <div class="faq-item">
+            <h4>❓ Is this really 100% free?</h4>
+            <p>Yes! FreeFakeStudio is 100% open-source, and Google Colab provides free access to NVIDIA T4 GPUs for everyone with a Google account.</p>
+          </div>
+          <div class="faq-item">
+            <h4>❓ Can I close the Colab tab?</h4>
+            <p><strong>Keep it open in the background!</strong> You do not need to look at it, but if you close the tab completely, Google will shut down your free GPU runtime.</p>
+          </div>
+          <div class="faq-item">
+            <h4>❓ Which model should I pick first?</h4>
+            <p>Start with <strong>Z-Image Turbo</strong>. It downloads in under 2 minutes and generates beautiful images in just 8 steps!</p>
+          </div>
+          <div class="faq-item">
+            <h4>❓ How do I get back here once Colab finishes?</h4>
+            <p>When the Colab script finishes loading, a giant glowing button will appear right inside Colab: <em>"Open FreeFakeStudio Web App"</em>. Click it, and you will be returned here with everything connected!</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- State 2: Studio View (When GPU is connected) -->
+    <section id="studio-view" class="view">
+      <div class="studio-header">
+        <div class="studio-info">
+          <span class="status-pill status-connected">
+            <span class="status-dot"></span>
+            <span>GPU Active</span>
+          </span>
+          <span id="backend-display" class="backend-url-badge">Connecting...</span>
+        </div>
+        <div class="studio-controls">
+          <button id="open-newtab-btn" class="btn btn-sm btn-outline" title="Open Studio in Fullscreen New Tab">
+            <span>↗ Open Fullscreen</span>
+          </button>
+          <button id="switch-engine-btn" class="btn btn-sm btn-ghost">
+            <span>Change Engine</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Seamless Embedded Studio Frame -->
+      <div class="studio-frame-container">
+        <div id="frame-loading" class="frame-loader">
+          <div class="spinner"></div>
+          <p id="loader-status">Connecting to your FreeFakeStudio GPU...</p>
+        </div>
+        <iframe id="studio-iframe" class="studio-frame" allow="clipboard-read; clipboard-write" allowfullscreen></iframe>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-container">
+      <p>🎭 <strong>FreeFakeStudio</strong> — Open-source Multi-Model AI Image Studio</p>
+      <p class="footer-sub">
+        Built for students, creators, and educators · Apache-2.0 License · 
+        <a href="https://github.com/MuntasirMalek/FreeFakeStudio" target="_blank">GitHub Repository</a>
+      </p>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
