@@ -424,10 +424,41 @@ def preview_auto_mask(image, mask_mode):
 
 
 
-# ── Build UI ───────────────────────────────────────────────
-with gr.Blocks(theme=zfooocus_theme, css=CSS, title="FreeFakeStudio") as demo:
+def make_gallery(label="Results"):
+    gallery_kwargs = {
+        "label": label,
+        "columns": 2,
+        "height": 520,
+        "object_fit": "contain",
+        "preview": True,
+    }
+    import inspect
+    sig = inspect.signature(gr.Gallery.__init__).parameters
+    valid_kwargs = {k: v for k, v in gallery_kwargs.items() if k in sig}
+    return gr.Gallery(**valid_kwargs)
 
-    gr.HTML(JS_CUSTOM)
+# ── Build UI ───────────────────────────────────────────────
+import inspect
+blocks_kwargs = {"title": "FreeFakeStudio"}
+if "head" in inspect.signature(gr.Blocks.__init__).parameters:
+    blocks_kwargs["head"] = JS_CUSTOM
+
+major_v = 4
+if hasattr(gr, "__version__"):
+    try:
+        major_v = int(re.search(r'\d+', gr.__version__).group())
+    except Exception:
+        pass
+
+if major_v < 6:
+    if "theme" in inspect.signature(gr.Blocks.__init__).parameters:
+        blocks_kwargs["theme"] = zfooocus_theme
+    if "css" in inspect.signature(gr.Blocks.__init__).parameters:
+        blocks_kwargs["css"] = CSS
+
+with gr.Blocks(**blocks_kwargs) as demo:
+    if "head" not in blocks_kwargs:
+        gr.HTML(JS_CUSTOM)
 
     with gr.Tabs():
 
@@ -456,9 +487,7 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="FreeFakeStudio") as demo:
                         gen_neg = gr.Textbox(DEFAULT_NEG, label="Negative Prompt", lines=2)
                 with gr.Column(scale=1):
                     gr.HTML('<h1 class="main-title">🎭 <span>FreeFakeStudio</span></h1>')
-                    gen_gallery = gr.Gallery(label="Results", columns=2, height=520,
-                                             object_fit="contain", show_download_button=True,
-                                             show_fullscreen_button=True, preview=True)
+                    gen_gallery = make_gallery(label="Results")
                     gen_dl = gr.File(label="Download All", file_count="multiple")
                     gen_seed_out = gr.Textbox(label="Seed Used", interactive=False, show_copy_button=True)
 
@@ -492,9 +521,7 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="FreeFakeStudio") as demo:
 
                 with gr.Column(scale=1):
                     gr.HTML('<h1 class="main-title">🎭 <span>FreeFakeStudio</span></h1>')
-                    i2i_gallery = gr.Gallery(label="Results", columns=2, height=520,
-                                              object_fit="contain", show_download_button=True,
-                                              show_fullscreen_button=True, preview=True)
+                    i2i_gallery = make_gallery(label="Results")
                     i2i_dl = gr.File(label="Download All", file_count="multiple")
                     i2i_seed_out = gr.Textbox(label="Seed Used", interactive=False, show_copy_button=True)
 
@@ -545,9 +572,7 @@ with gr.Blocks(theme=zfooocus_theme, css=CSS, title="FreeFakeStudio") as demo:
                     inp_clear = gr.ClearButton([inp_editor, inp_image, inp_mask_preview], value="🗑️ Clear All")
                 with gr.Column(scale=1):
                     gr.HTML('<h1 class="main-title">🎭 <span>FreeFakeStudio</span></h1>')
-                    inp_gallery = gr.Gallery(label="Results", columns=2, height=520,
-                                              object_fit="contain", show_download_button=True,
-                                              show_fullscreen_button=True, preview=True)
+                    inp_gallery = make_gallery(label="Results")
                     inp_send_btn = gr.Button("🖌️ Send to Paint Editor for Touch-up", variant="secondary")
                     inp_dl = gr.File(label="Download All", file_count="multiple")
                     inp_seed_out = gr.Textbox(label="Seed Used", interactive=False, show_copy_button=True)
@@ -632,4 +657,13 @@ for _name, _file in _model_files.items():
 else:
     print("⚠️ No pre-loaded model — select one from the dropdown to load on first use")
 
-demo.launch(share=True, debug=True)
+launch_kwargs = {"share": True, "debug": True}
+if major_v >= 6:
+    launch_kwargs["theme"] = zfooocus_theme
+    launch_kwargs["css"] = CSS
+elif "theme" in inspect.signature(demo.launch).parameters:
+    launch_kwargs["theme"] = zfooocus_theme
+    if "css" in inspect.signature(demo.launch).parameters:
+        launch_kwargs["css"] = CSS
+
+demo.launch(**launch_kwargs)
