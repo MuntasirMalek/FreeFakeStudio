@@ -16,12 +16,18 @@
   const openNewtabBtn = document.getElementById('open-newtab-btn');
   const switchEngineBtn = document.getElementById('switch-engine-btn');
 
-  const selectFastBtn = document.getElementById('select-fast-btn');
-  const selectAllBtn = document.getElementById('select-all-btn');
-  const modelCheckboxes = document.querySelectorAll('input[name="model"]');
+  // Metrics & Presets
+  const metricsCount = document.getElementById('metrics-model-count');
+  const metricsSize = document.getElementById('metrics-download-size');
+  const metricsTime = document.getElementById('metrics-boot-time');
 
-  const manualUrlInput = document.getElementById('manual-url');
-  const manualConnectBtn = document.getElementById('manual-connect-btn');
+  const presetFast = document.getElementById('preset-fast');
+  const presetFlux = document.getElementById('preset-flux');
+  const presetEdit = document.getElementById('preset-edit');
+  const presetAll = document.getElementById('preset-all');
+  const presetChips = [presetFast, presetFlux, presetEdit, presetAll].filter(Boolean);
+
+  const modelCheckboxes = document.querySelectorAll('input[name="model"]');
 
   const STORAGE_KEY = 'freefake_backend_url';
   const MODELS_STORAGE_KEY = 'freefake_selected_models';
@@ -29,8 +35,10 @@
   // Initialize
   function init() {
     setupModelCheckboxes();
+    setupPresetButtons();
     setupListeners();
     checkConnection();
+    updateMetrics();
   }
 
   function setupModelCheckboxes() {
@@ -53,39 +61,74 @@
           cb.checked = true;
         }
         updateCardStyle(cb);
-        if (selectFastBtn) selectFastBtn.classList.remove('active');
-        if (selectAllBtn) selectAllBtn.classList.remove('active');
+        clearActivePreset();
         saveSelectedModels();
+        updateMetrics();
       });
     });
+  }
 
-    if (selectFastBtn) {
-      selectFastBtn.addEventListener('click', () => {
+  function setupPresetButtons() {
+    if (presetFast) {
+      presetFast.addEventListener('click', () => {
+        setActivePreset(presetFast);
         modelCheckboxes.forEach((cb) => {
           cb.checked = (cb.value === '⚡ Z-Image Turbo');
           updateCardStyle(cb);
         });
-        selectFastBtn.classList.add('active');
-        if (selectAllBtn) selectAllBtn.classList.remove('active');
         saveSelectedModels();
+        updateMetrics();
       });
     }
 
-    if (selectAllBtn) {
-      selectAllBtn.addEventListener('click', () => {
+    if (presetFlux) {
+      presetFlux.addEventListener('click', () => {
+        setActivePreset(presetFlux);
+        modelCheckboxes.forEach((cb) => {
+          cb.checked = (cb.value === '🌊 FLUX.2-klein 4B' || cb.value === '🔮 FLUX.2-klein 9B');
+          updateCardStyle(cb);
+        });
+        saveSelectedModels();
+        updateMetrics();
+      });
+    }
+
+    if (presetEdit) {
+      presetEdit.addEventListener('click', () => {
+        setActivePreset(presetEdit);
+        modelCheckboxes.forEach((cb) => {
+          cb.checked = (cb.value === '🎨 Qwen-Image-Edit' || cb.value === '⚡ Z-Image Turbo');
+          updateCardStyle(cb);
+        });
+        saveSelectedModels();
+        updateMetrics();
+      });
+    }
+
+    if (presetAll) {
+      presetAll.addEventListener('click', () => {
+        setActivePreset(presetAll);
         modelCheckboxes.forEach((cb) => {
           cb.checked = true;
           updateCardStyle(cb);
         });
-        selectAllBtn.classList.add('active');
-        if (selectFastBtn) selectFastBtn.classList.remove('active');
         saveSelectedModels();
+        updateMetrics();
       });
     }
   }
 
+  function setActivePreset(activeChip) {
+    presetChips.forEach(chip => chip.classList.remove('active'));
+    if (activeChip) activeChip.classList.add('active');
+  }
+
+  function clearActivePreset() {
+    presetChips.forEach(chip => chip.classList.remove('active'));
+  }
+
   function updateCardStyle(cb) {
-    const parent = cb.closest('.model-checkbox-item');
+    const parent = cb.closest('.model-card');
     if (parent) {
       if (cb.checked) {
         parent.classList.add('checked');
@@ -93,6 +136,32 @@
         parent.classList.remove('checked');
       }
     }
+  }
+
+  function updateMetrics() {
+    let count = 0;
+    let totalSize = 0;
+    let totalTime = 0;
+
+    modelCheckboxes.forEach((cb) => {
+      if (cb.checked) {
+        count++;
+        const card = cb.closest('.model-card');
+        if (card) {
+          const s = parseFloat(card.getAttribute('data-size')) || 0;
+          const t = parseFloat(card.getAttribute('data-time')) || 0;
+          totalSize += s;
+          totalTime = Math.max(totalTime, t); // parallel downloads overlap, so time scales gracefully
+        }
+      }
+    });
+
+    if (metricsCount) metricsCount.textContent = `${count} / ${modelCheckboxes.length}`;
+    if (metricsSize) metricsSize.textContent = `~${totalSize.toFixed(1)} GB`;
+    
+    // Estimate boot time based on total volume with aria2 1Gbps (~100MB/s) + 40s environment setup
+    const estMinutes = (totalSize / 5.5).toFixed(1);
+    if (metricsTime) metricsTime.textContent = `~${Math.max(1.2, parseFloat(estMinutes))} min`;
   }
 
   function saveSelectedModels() {
@@ -103,37 +172,26 @@
   }
 
   function setupListeners() {
-    manualConnectBtn.addEventListener('click', () => {
-      const url = manualUrlInput.value.trim();
-      if (!url) {
-        alert("Please enter a valid gradio.live URL!");
-        return;
-      }
-      connectToBackend(url);
-    });
+    if (disconnectBtn) disconnectBtn.addEventListener('click', disconnect);
+    if (switchEngineBtn) switchEngineBtn.addEventListener('click', disconnect);
 
-    manualUrlInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        manualConnectBtn.click();
-      }
-    });
-
-    disconnectBtn.addEventListener('click', disconnect);
-    switchEngineBtn.addEventListener('click', disconnect);
-
-    openNewtabBtn.addEventListener('click', () => {
-      const currentUrl = localStorage.getItem(STORAGE_KEY);
-      if (currentUrl) {
-        window.open(currentUrl, '_blank');
-      }
-    });
+    if (openNewtabBtn) {
+      openNewtabBtn.addEventListener('click', () => {
+        const currentUrl = localStorage.getItem(STORAGE_KEY);
+        if (currentUrl) {
+          window.open(currentUrl, '_blank');
+        }
+      });
+    }
 
     // Iframe load handler
-    studioIframe.addEventListener('load', () => {
-      if (studioIframe.src && studioIframe.src !== 'about:blank') {
-        frameLoader.classList.add('fade-out');
-      }
-    });
+    if (studioIframe) {
+      studioIframe.addEventListener('load', () => {
+        if (studioIframe.src && studioIframe.src !== 'about:blank') {
+          if (frameLoader) frameLoader.classList.add('fade-out');
+        }
+      });
+    }
   }
 
   function checkConnection() {
@@ -172,34 +230,38 @@
   }
 
   function showStudio(url) {
-    launcherView.classList.remove('active');
-    studioView.classList.add('active');
+    if (launcherView) launcherView.classList.remove('active');
+    if (studioView) studioView.classList.add('active');
 
-    connectionStatus.className = 'status-pill status-connected';
-    statusText.textContent = 'GPU Active';
-    disconnectBtn.classList.remove('hidden');
+    if (connectionStatus) connectionStatus.className = 'status-pill status-connected';
+    if (statusText) statusText.textContent = 'GPU Active';
+    if (disconnectBtn) disconnectBtn.classList.remove('hidden');
 
-    backendDisplay.textContent = url.replace(/^https?:\/\//, '');
+    if (backendDisplay) backendDisplay.textContent = url.replace(/^https?:\/\//, '');
 
-    frameLoader.classList.remove('fade-out');
-    loaderStatus.textContent = 'Loading your FreeFakeStudio interface...';
+    if (frameLoader) {
+      frameLoader.classList.remove('fade-out');
+      if (loaderStatus) loaderStatus.textContent = 'Connecting to FreeFakeStudio GPU Engine...';
+    }
 
-    if (studioIframe.src !== url) {
-      studioIframe.src = url;
-    } else {
-      frameLoader.classList.add('fade-out');
+    if (studioIframe) {
+      if (studioIframe.src !== url) {
+        studioIframe.src = url;
+      } else {
+        if (frameLoader) frameLoader.classList.add('fade-out');
+      }
     }
   }
 
   function showLauncher() {
-    studioView.classList.remove('active');
-    launcherView.classList.add('active');
+    if (studioView) studioView.classList.remove('active');
+    if (launcherView) launcherView.classList.add('active');
 
-    connectionStatus.className = 'status-pill status-disconnected';
-    statusText.textContent = 'Disconnected';
-    disconnectBtn.classList.add('hidden');
+    if (connectionStatus) connectionStatus.className = 'status-pill status-disconnected';
+    if (statusText) statusText.textContent = 'Disconnected';
+    if (disconnectBtn) disconnectBtn.classList.add('hidden');
 
-    studioIframe.src = 'about:blank';
+    if (studioIframe) studioIframe.src = 'about:blank';
   }
 
   function disconnect() {

@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FreeFakeStudio — Free AI Image Studio</title>
+  <title>FreeFakeStudio — Multi-Model AI Image Studio</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -17,9 +17,14 @@
         <span class="brand-icon">🎭</span>
         <div class="brand-text">
           <h1>FreeFakeStudio</h1>
+          <span class="brand-tag">v2.0 Pro</span>
         </div>
       </div>
       <div class="nav-actions">
+        <div class="hardware-badge">
+          <span class="hw-icon">⚡</span>
+          <span>NVIDIA T4 16GB</span>
+        </div>
         <div id="connection-status" class="status-pill status-disconnected">
           <span class="status-dot"></span>
           <span id="status-text">Disconnected</span>
@@ -32,80 +37,246 @@
   <!-- Main Content -->
   <main class="main-content">
     
-    <!-- State 1: Launcher with Model Checkboxes -->
+    <!-- State 1: Launcher View -->
     <section id="launcher-view" class="view active">
-      <div class="minimal-launcher">
-        <h2 class="minimal-title">Create AI Art for Free</h2>
+      <div class="studio-launcher-container">
         
-        <div class="launcher-box">
-          <div class="models-header">
-            <label class="models-label">Select Models (pick 1 or multiple):</label>
-            <div class="quick-select-btns">
-              <button type="button" id="select-fast-btn" class="pill-btn active">⚡ Fast Only</button>
-              <button type="button" id="select-all-btn" class="pill-btn">✨ Select All</button>
-            </div>
+        <!-- Hero Title & Architecture Bar -->
+        <div class="launcher-hero">
+          <div class="hero-chip">✨ Open-Source Generative AI Engine</div>
+          <h2 class="hero-headline">Multi-Model AI Image Studio</h2>
+          <p class="hero-description">
+            Run cutting-edge generative diffusion models on dedicated cloud GPU hardware with zero installation and zero cost.
+          </p>
+        </div>
+
+        <!-- Telemetry & Preset Control Panel -->
+        <div class="telemetry-panel">
+          <div class="telemetry-item">
+            <span class="telemetry-label">MODELS ACTIVE</span>
+            <span class="telemetry-value" id="metrics-model-count">1 / 5</span>
           </div>
-
-          <div class="models-grid">
-            <label class="model-checkbox-item">
-              <input type="checkbox" name="model" value="⚡ Z-Image Turbo" checked>
-              <span class="checkmark"></span>
-              <div class="model-info">
-                <strong>⚡ Z-Image Turbo</strong>
-                <small>Fastest generation (8 steps, ~1 min)</small>
-              </div>
-            </label>
-
-            <label class="model-checkbox-item">
-              <input type="checkbox" name="model" value="🌊 FLUX.2-klein 4B">
-              <span class="checkmark"></span>
-              <div class="model-info">
-                <strong>🌊 FLUX.2-klein 4B</strong>
-                <small>Photorealistic &amp; general purpose</small>
-              </div>
-            </label>
-
-            <label class="model-checkbox-item">
-              <input type="checkbox" name="model" value="🔮 FLUX.2-klein 9B">
-              <span class="checkmark"></span>
-              <div class="model-info">
-                <strong>🔮 FLUX.2-klein 9B</strong>
-                <small>Maximum high-res detail</small>
-              </div>
-            </label>
-
-            <label class="model-checkbox-item">
-              <input type="checkbox" name="model" value="🎨 Qwen-Image-Edit">
-              <span class="checkmark"></span>
-              <div class="model-info">
-                <strong>🎨 Qwen-Image-Edit</strong>
-                <small>Conversational image editing</small>
-              </div>
-            </label>
-
-            <label class="model-checkbox-item">
-              <input type="checkbox" name="model" value="🖌️ ERNIE-Image Turbo">
-              <span class="checkmark"></span>
-              <div class="model-info">
-                <strong>🖌️ ERNIE-Image Turbo</strong>
-                <small>Baidu turbo text-to-image</small>
-              </div>
-            </label>
+          <div class="telemetry-divider"></div>
+          <div class="telemetry-item">
+            <span class="telemetry-label">EST. WEIGHTS</span>
+            <span class="telemetry-value" id="metrics-download-size">~6.2 GB</span>
           </div>
-
-          <a id="colab-launch-btn" href="https://colab.research.google.com/github/MuntasirMalek/FreeFakeStudio/blob/main/FreeFakeStudio_1Click.ipynb" target="_blank" class="btn btn-primary btn-giant btn-pulse">
-            <span>🚀 START FREE GPU ▶️</span>
-          </a>
-
-          <div class="quick-connect">
-            <input type="url" id="manual-url" placeholder="Or paste gradio.live link here..." class="text-input text-input-sm">
-            <button id="manual-connect-btn" class="btn btn-secondary btn-sm">Connect</button>
+          <div class="telemetry-divider"></div>
+          <div class="telemetry-item">
+            <span class="telemetry-label">EST. SETUP TIME</span>
+            <span class="telemetry-value" id="metrics-boot-time">~1.5 min</span>
+          </div>
+          <div class="telemetry-divider"></div>
+          <div class="telemetry-item">
+            <span class="telemetry-label">VRAM ALLOCATION</span>
+            <span class="telemetry-value highlight-green">T4 Budget OK</span>
           </div>
         </div>
+
+        <!-- Preset Filters -->
+        <div class="presets-bar">
+          <span class="presets-title">Quick Presets:</span>
+          <div class="presets-chips">
+            <button type="button" id="preset-fast" class="preset-chip active">⚡ Speed Starter (Z-Image)</button>
+            <button type="button" id="preset-flux" class="preset-chip">🌊 Photoreal Duo (FLUX 4B+9B)</button>
+            <button type="button" id="preset-edit" class="preset-chip">🎨 Creative Editor (Qwen+Z-Image)</button>
+            <button type="button" id="preset-all" class="preset-chip">✨ Full Studio Suite (All 5)</button>
+          </div>
+        </div>
+
+        <!-- Rich Model Selection Grid -->
+        <div class="models-grid-advanced">
+
+          <!-- Model 1: Z-Image Turbo -->
+          <label class="model-card checked" data-size="6.2" data-time="1.5">
+            <div class="model-card-header">
+              <div class="model-checkbox-wrap">
+                <input type="checkbox" name="model" value="⚡ Z-Image Turbo" checked>
+                <span class="custom-check"></span>
+              </div>
+              <div class="model-card-title-wrap">
+                <div class="model-name-row">
+                  <span class="model-name">⚡ Z-Image Turbo</span>
+                  <span class="arch-badge badge-turbo">Turbo 8-Step</span>
+                </div>
+                <span class="model-subtitle">Tongyi-MAI · FP8 Tensor Core Optimized</span>
+              </div>
+            </div>
+            <p class="model-desc">
+              Blistering fast high-quality image generation in only 8 sampling steps. Fastest boot time with pristine coherence.
+            </p>
+            <div class="model-specs-row">
+              <span class="spec-pill">📦 ~6.2 GB</span>
+              <span class="spec-pill">⏱️ 8 Steps</span>
+              <span class="spec-pill tag-badge">Text-to-Image</span>
+              <span class="spec-pill tag-badge">Ultra-Fast</span>
+            </div>
+          </label>
+
+          <!-- Model 2: FLUX.2-klein 4B -->
+          <label class="model-card" data-size="11.4" data-time="2.5">
+            <div class="model-card-header">
+              <div class="model-checkbox-wrap">
+                <input type="checkbox" name="model" value="🌊 FLUX.2-klein 4B">
+                <span class="custom-check"></span>
+              </div>
+              <div class="model-card-title-wrap">
+                <div class="model-name-row">
+                  <span class="model-name">🌊 FLUX.2-klein 4B</span>
+                  <span class="arch-badge badge-flux">Photoreal</span>
+                </div>
+                <span class="model-subtitle">Black Forest Labs · FP4 / FP8 Hybrid</span>
+              </div>
+            </div>
+            <p class="model-desc">
+              Industry-standard photorealism and general purpose creative engine. Superb human anatomy, textures, and prompt understanding.
+            </p>
+            <div class="model-specs-row">
+              <span class="spec-pill">📦 ~11.4 GB</span>
+              <span class="spec-pill">⏱️ 20 Steps</span>
+              <span class="spec-pill tag-badge">Generate</span>
+              <span class="spec-pill tag-badge">Img2Img</span>
+              <span class="spec-pill tag-badge">Inpaint</span>
+            </div>
+          </label>
+
+          <!-- Model 3: FLUX.2-klein 9B -->
+          <label class="model-card" data-size="13.8" data-time="3.0">
+            <div class="model-card-header">
+              <div class="model-checkbox-wrap">
+                <input type="checkbox" name="model" value="🔮 FLUX.2-klein 9B">
+                <span class="custom-check"></span>
+              </div>
+              <div class="model-card-title-wrap">
+                <div class="model-name-row">
+                  <span class="model-name">🔮 FLUX.2-klein 9B</span>
+                  <span class="arch-badge badge-pro">Max Detail</span>
+                </div>
+                <span class="model-subtitle">BFL · FP8 UNET + Qwen3 GGUF Text Encoder</span>
+              </div>
+            </div>
+            <p class="model-desc">
+              Maximum resolution detail and high-frequency textures. Hybrid architecture squeezing 9B parameters into 15GB VRAM.
+            </p>
+            <div class="model-specs-row">
+              <span class="spec-pill">📦 ~13.8 GB</span>
+              <span class="spec-pill">⏱️ 25 Steps</span>
+              <span class="spec-pill tag-badge">Ultra-HD</span>
+              <span class="spec-pill tag-badge">Intricate Composition</span>
+            </div>
+          </label>
+
+          <!-- Model 4: Qwen-Image-Edit -->
+          <label class="model-card" data-size="15.2" data-time="3.5">
+            <div class="model-card-header">
+              <div class="model-checkbox-wrap">
+                <input type="checkbox" name="model" value="🎨 Qwen-Image-Edit">
+                <span class="custom-check"></span>
+              </div>
+              <div class="model-card-title-wrap">
+                <div class="model-name-row">
+                  <span class="model-name">🎨 Qwen-Image-Edit</span>
+                  <span class="arch-badge badge-ai">Conversational AI</span>
+                </div>
+                <span class="model-subtitle">QwenLM · Q3_K_M GGUF + VL-7B Vision Language</span>
+              </div>
+            </div>
+            <p class="model-desc">
+              Conversational instruction-following image editor. Type changes in natural English ("change hair to blonde", "make background a sunset beach").
+            </p>
+            <div class="model-specs-row">
+              <span class="spec-pill">📦 ~15.2 GB</span>
+              <span class="spec-pill">⏱️ 20 Steps</span>
+              <span class="spec-pill tag-badge">NLP Editing</span>
+              <span class="spec-pill tag-badge">Auto Masking</span>
+            </div>
+          </label>
+
+          <!-- Model 5: ERNIE-Image Turbo -->
+          <label class="model-card" data-size="9.1" data-time="2.0">
+            <div class="model-card-header">
+              <div class="model-checkbox-wrap">
+                <input type="checkbox" name="model" value="🖌️ ERNIE-Image Turbo">
+                <span class="custom-check"></span>
+              </div>
+              <div class="model-card-title-wrap">
+                <div class="model-name-row">
+                  <span class="model-name">🖌️ ERNIE-Image Turbo</span>
+                  <span class="arch-badge badge-turbo">Turbo 8-Step</span>
+                </div>
+                <span class="model-subtitle">Baidu · Q6_K GGUF + Ministral-3 Text Encoder</span>
+              </div>
+            </div>
+            <p class="model-desc">
+              High-speed 8-step diffusion engine by Baidu. Outstanding typography, Asian aesthetics, poster styling, and complex instructions.
+            </p>
+            <div class="model-specs-row">
+              <span class="spec-pill">📦 ~9.1 GB</span>
+              <span class="spec-pill">⏱️ 8 Steps</span>
+              <span class="spec-pill tag-badge">Typography</span>
+              <span class="spec-pill tag-badge">Poster Design</span>
+            </div>
+          </label>
+
+        </div>
+
+        <!-- Launch CTA Action Button -->
+        <div class="launch-action-box">
+          <a id="colab-launch-btn" href="https://colab.research.google.com/github/MuntasirMalek/FreeFakeStudio/blob/main/FreeFakeStudio_1Click.ipynb" target="_blank" class="btn btn-primary btn-giant btn-pulse">
+            <span class="btn-icon">🚀</span>
+            <span class="btn-text">START FREE GPU IN 1 CLICK ▶️</span>
+          </a>
+          <p class="launch-note">
+            🔒 Allocates dedicated Google Cloud T4 GPU runtime · Free &amp; unlimited generations
+          </p>
+        </div>
+
+        <!-- Technical Architecture & Specs Matrix -->
+        <div class="specs-matrix-container">
+          <div class="specs-matrix-header">
+            <h3>⚙️ Engine Architecture &amp; Capabilities</h3>
+            <span class="specs-sub">High-Performance Pipeline Specifications</span>
+          </div>
+
+          <div class="specs-grid">
+            <div class="spec-box">
+              <div class="spec-box-icon">🖼️</div>
+              <div class="spec-box-content">
+                <h4>Generate Engine</h4>
+                <p>Multi-aspect ratios (1:1, 16:9, 9:16, 4:3, 3:4), CFG guidance scaling, custom seed locking, and multi-batch execution.</p>
+              </div>
+            </div>
+
+            <div class="spec-box">
+              <div class="spec-box-icon">✏️</div>
+              <div class="spec-box-content">
+                <h4>Img2Img Restyling</h4>
+                <p>Latent transformations with adjustable denoise strength (0.1–1.0) for seamless style transfer and composition retention.</p>
+              </div>
+            </div>
+
+            <div class="spec-box">
+              <div class="spec-box-icon">🎨</div>
+              <div class="spec-box-content">
+                <h4>Surgical Inpainting</h4>
+                <p>Precision brush editor, automated rembg background isolation, and mathematical silhouette retention at 0.55 denoise.</p>
+              </div>
+            </div>
+
+            <div class="spec-box">
+              <div class="spec-box-icon">⚡</div>
+              <div class="spec-box-content">
+                <h4>Cloud Acceleration</h4>
+                <p>16-channel aria2 parallel downloads (~1 Gbps), FP8/GGUF mixed precision, and ComfyUI node graph acceleration.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>
     </section>
 
-    <!-- State 2: Studio View -->
+    <!-- State 2: Studio View (When GPU is active) -->
     <section id="studio-view" class="view">
       <div class="studio-header">
         <div class="studio-info">
@@ -116,7 +287,7 @@
           <span id="backend-display" class="backend-url-badge">Connecting...</span>
         </div>
         <div class="studio-controls">
-          <button id="open-newtab-btn" class="btn btn-sm btn-outline">↗ New Tab</button>
+          <button id="open-newtab-btn" class="btn btn-sm btn-outline">↗ Open Fullscreen</button>
           <button id="switch-engine-btn" class="btn btn-sm btn-ghost">Change Models</button>
         </div>
       </div>
@@ -124,13 +295,24 @@
       <div class="studio-frame-container">
         <div id="frame-loading" class="frame-loader">
           <div class="spinner"></div>
-          <p id="loader-status">Loading Studio...</p>
+          <p id="loader-status">Connecting to FreeFakeStudio GPU Engine...</p>
         </div>
         <iframe id="studio-iframe" class="studio-frame" allow="clipboard-read; clipboard-write" allowfullscreen></iframe>
       </div>
     </section>
 
   </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-container">
+      <p>🎭 <strong>FreeFakeStudio</strong> — Open-Source Multi-Model AI Image Studio</p>
+      <p class="footer-sub">
+        Built for students, creators, and researchers · Apache-2.0 License · 
+        <a href="https://github.com/MuntasirMalek/FreeFakeStudio" target="_blank">GitHub Repository</a>
+      </p>
+    </div>
+  </footer>
 
   <script src="app.js"></script>
 </body>

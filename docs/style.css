@@ -653,145 +653,479 @@ body {
   }
 }
 
-/* ── Minimal Launcher ────────────────────────────────────── */
-.minimal-launcher {
-  max-width: 520px;
-  margin: 40px auto 0;
-  text-align: center;
-}
-
-.minimal-title {
-  font-size: 2.2rem;
-  font-weight: 900;
-  margin-bottom: 24px;
-  letter-spacing: -0.03em;
-}
-
-.launcher-box {
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-xl);
-  padding: 32px 24px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+/* ── Advanced Studio Launcher ────────────────────────── */
+.studio-launcher-container {
+  max-width: 900px;
+  margin: 10px auto 40px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 24px;
 }
 
-.btn-giant {
-  padding: 22px 32px;
-  font-size: 1.35rem;
-  font-weight: 900;
-  border-radius: var(--radius-lg);
-  letter-spacing: 0.02em;
+/* ── Hero Headline ───────────────────────────────────────── */
+.launcher-hero {
+  text-align: center;
+  padding: 10px 0 6px;
 }
 
-.quick-connect {
-  display: flex;
-  gap: 8px;
-  margin-top: 8px;
-  padding-top: 18px;
-  border-top: 1px solid var(--border-color);
-}
-
-.text-input-sm {
-  font-size: 0.8rem;
-  padding: 8px 12px;
-}
-
-/* ── Models Selection ────────────────────────────────────── */
-.models-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+.hero-chip {
+  display: inline-block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  background: rgba(59, 130, 246, 0.12);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  padding: 5px 14px;
+  border-radius: 9999px;
   margin-bottom: 12px;
 }
 
-.models-label {
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: var(--text-main);
+.hero-headline {
+  font-size: 2.6rem;
+  font-weight: 900;
+  letter-spacing: -0.035em;
+  line-height: 1.15;
+  margin-bottom: 10px;
+  background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 50%, #94a3b8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
-.quick-select-btns {
-  display: flex;
-  gap: 6px;
-}
-
-.pill-btn {
-  background: var(--bg-input);
-  border: 1px solid var(--border-color);
+.hero-description {
+  font-size: 1.02rem;
   color: var(--text-muted);
-  font-size: 0.75rem;
+  max-width: 640px;
+  margin: 0 auto;
+  line-height: 1.55;
+}
+
+/* ── Hardware Badge in Header ────────────────────────────── */
+.hardware-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.78rem;
   font-weight: 700;
-  padding: 4px 10px;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  padding: 5px 12px;
   border-radius: 9999px;
-  cursor: pointer;
-  transition: all 0.2s ease;
 }
 
-.pill-btn:hover {
-  color: var(--text-main);
-  border-color: var(--primary);
+.brand-tag {
+  font-size: 0.65rem;
+  font-weight: 800;
+  background: rgba(139, 92, 246, 0.2);
+  color: #a78bfa;
+  border: 1px solid rgba(139, 92, 246, 0.35);
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 8px;
+  vertical-align: middle;
 }
 
-.pill-btn.active {
-  background: rgba(59, 130, 246, 0.2);
-  color: #60a5fa;
-  border-color: var(--primary);
+/* ── Live Telemetry Panel ────────────────────────────────── */
+.telemetry-panel {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
 }
 
-.models-grid {
+.telemetry-item {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  text-align: left;
+  gap: 4px;
+  text-align: center;
 }
 
-.model-checkbox-item {
+.telemetry-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+}
+
+.telemetry-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.telemetry-value.highlight-green {
+  color: #34d399;
+}
+
+.telemetry-divider {
+  width: 1px;
+  background: var(--border-color);
+  height: 70%;
+  margin: auto 0;
+}
+
+/* ── Preset Chips ────────────────────────────────────────── */
+.presets-bar {
   display: flex;
   align-items: center;
   gap: 12px;
-  background: var(--bg-input);
+  flex-wrap: wrap;
+}
+
+.presets-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.presets-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.preset-chip {
+  background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  padding: 12px 16px;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 9999px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.preset-chip:hover {
+  color: var(--text-main);
+  border-color: var(--primary);
+  transform: translateY(-1px);
+}
+
+.preset-chip.active {
+  background: rgba(37, 99, 235, 0.2);
+  color: #60a5fa;
+  border-color: var(--primary);
+  box-shadow: 0 0 12px rgba(37, 99, 235, 0.3);
+}
+
+/* ── Advanced Models Grid ────────────────────────────────── */
+.models-grid-advanced {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.model-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 18px 22px;
+  cursor: pointer;
+  transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
   user-select: none;
+  position: relative;
+  overflow: hidden;
 }
 
-.model-checkbox-item:hover {
+.model-card:hover {
   border-color: var(--border-accent);
-  background: rgba(30, 41, 59, 0.8);
+  background: rgba(30, 41, 59, 0.65);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
 }
 
-.model-checkbox-item input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
-  accent-color: var(--primary);
-  cursor: pointer;
+.model-card.checked {
+  border-color: var(--primary);
+  background: rgba(37, 99, 235, 0.08);
+  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.4), 0 8px 24px rgba(37, 99, 235, 0.15);
+}
+
+.model-card.checked::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--primary);
+}
+
+.model-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.model-checkbox-wrap {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  margin-top: 2px;
   flex-shrink: 0;
 }
 
-.model-checkbox-item.checked {
-  border-color: var(--primary);
-  background: rgba(59, 130, 246, 0.1);
+.model-checkbox-wrap input[type="checkbox"] {
+  width: 22px;
+  height: 22px;
+  opacity: 0;
+  position: absolute;
+  cursor: pointer;
+  z-index: 2;
 }
 
-.model-info {
+.custom-check {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 22px;
+  height: 22px;
+  background: var(--bg-input);
+  border: 2px solid var(--border-color);
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.model-card.checked .custom-check {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.model-card.checked .custom-check::after {
+  content: '';
+  position: absolute;
+  left: 7px;
+  top: 3px;
+  width: 5px;
+  height: 10px;
+  border: solid #ffffff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.model-card-title-wrap {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  flex: 1;
 }
 
-.model-info strong {
-  font-size: 0.95rem;
+.model-name-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.model-name {
+  font-size: 1.12rem;
+  font-weight: 800;
+  color: var(--text-main);
+  letter-spacing: -0.01em;
+}
+
+.model-subtitle {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.arch-badge {
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 3px 8px;
+  border-radius: 9999px;
+  border: 1px solid transparent;
+}
+
+.badge-turbo {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.badge-flux {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+.badge-pro {
+  background: rgba(168, 85, 247, 0.15);
+  color: #c084fc;
+  border-color: rgba(168, 85, 247, 0.3);
+}
+
+.badge-ai {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.model-desc {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin: 0;
+  padding-left: 36px;
+}
+
+.model-specs-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-left: 36px;
+}
+
+.spec-pill {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: rgba(15, 23, 42, 0.6);
+  color: #94a3b8;
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.spec-pill.tag-badge {
+  font-family: inherit;
   font-weight: 700;
+  background: rgba(59, 130, 246, 0.08);
+  color: #93c5fd;
+  border-color: rgba(59, 130, 246, 0.2);
+}
+
+/* ── Launch Action Box ───────────────────────────────────── */
+.launch-action-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+}
+
+.btn-giant {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 520px;
+  padding: 22px 36px;
+  font-size: 1.35rem;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  border-radius: var(--radius-xl);
+  text-decoration: none;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  color: #ffffff;
+  box-shadow: 0 12px 35px rgba(37, 99, 235, 0.45);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-giant:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 45px rgba(37, 99, 235, 0.6);
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+}
+
+.launch-note {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  text-align: center;
+  margin: 0;
+}
+
+/* ── Specs & Capabilities Matrix ─────────────────────────── */
+.specs-matrix-container {
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  padding: 28px 24px;
+}
+
+.specs-matrix-header {
+  margin-bottom: 20px;
+}
+
+.specs-matrix-header h3 {
+  font-size: 1.15rem;
+  font-weight: 800;
+  margin-bottom: 4px;
   color: var(--text-main);
 }
 
-.model-info small {
+.specs-sub {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.specs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.spec-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.spec-box-icon {
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}
+
+.spec-box-content h4 {
+  font-size: 0.92rem;
+  font-weight: 800;
+  margin-bottom: 4px;
+  color: var(--text-main);
+}
+
+.spec-box-content p {
   font-size: 0.78rem;
   color: var(--text-muted);
+  line-height: 1.45;
+  margin: 0;
+}
+
+/* Responsive Overrides */
+@media (max-width: 768px) {
+  .telemetry-panel {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+  .telemetry-divider {
+    display: none;
+  }
+  .model-desc, .model-specs-row {
+    padding-left: 0;
+  }
+  .hero-headline {
+    font-size: 2rem;
+  }
 }
