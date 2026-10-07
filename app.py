@@ -437,11 +437,20 @@ def make_gallery(label="Results"):
     valid_kwargs = {k: v for k, v in gallery_kwargs.items() if k in sig}
     return gr.Gallery(**valid_kwargs)
 
+
+def make_seed_output():
+    kwargs = {"label": "Seed Used", "interactive": False}
+    import inspect
+    sig = inspect.signature(gr.Textbox.__init__).parameters
+    if "buttons" in sig:
+        kwargs["buttons"] = ["copy"]
+    elif "show_copy_button" in sig:
+        kwargs["show_copy_button"] = True
+    return gr.Textbox(**kwargs)
+
 # ── Build UI ───────────────────────────────────────────────
 import inspect
 blocks_kwargs = {"title": "FreeFakeStudio"}
-if "head" in inspect.signature(gr.Blocks.__init__).parameters:
-    blocks_kwargs["head"] = JS_CUSTOM
 
 major_v = 4
 if hasattr(gr, "__version__"):
@@ -451,15 +460,14 @@ if hasattr(gr, "__version__"):
         pass
 
 if major_v < 6:
+    if "head" in inspect.signature(gr.Blocks.__init__).parameters:
+        blocks_kwargs["head"] = JS_CUSTOM
     if "theme" in inspect.signature(gr.Blocks.__init__).parameters:
         blocks_kwargs["theme"] = zfooocus_theme
     if "css" in inspect.signature(gr.Blocks.__init__).parameters:
         blocks_kwargs["css"] = CSS
 
 with gr.Blocks(**blocks_kwargs) as demo:
-    if "head" not in blocks_kwargs:
-        gr.HTML(JS_CUSTOM)
-
     with gr.Tabs():
 
         # ═══════════════════════════════════════════════════
@@ -489,7 +497,7 @@ with gr.Blocks(**blocks_kwargs) as demo:
                     gr.HTML('<h1 class="main-title">🎭 <span>FreeFakeStudio</span></h1>')
                     gen_gallery = make_gallery(label="Results")
                     gen_dl = gr.File(label="Download All", file_count="multiple")
-                    gen_seed_out = gr.Textbox(label="Seed Used", interactive=False, show_copy_button=True)
+                    gen_seed_out = make_seed_output()
 
 
             gen_btn.click(
@@ -523,7 +531,7 @@ with gr.Blocks(**blocks_kwargs) as demo:
                     gr.HTML('<h1 class="main-title">🎭 <span>FreeFakeStudio</span></h1>')
                     i2i_gallery = make_gallery(label="Results")
                     i2i_dl = gr.File(label="Download All", file_count="multiple")
-                    i2i_seed_out = gr.Textbox(label="Seed Used", interactive=False, show_copy_button=True)
+                    i2i_seed_out = make_seed_output()
 
 
             i2i_btn.click(
@@ -575,7 +583,7 @@ with gr.Blocks(**blocks_kwargs) as demo:
                     inp_gallery = make_gallery(label="Results")
                     inp_send_btn = gr.Button("🖌️ Send to Paint Editor for Touch-up", variant="secondary")
                     inp_dl = gr.File(label="Download All", file_count="multiple")
-                    inp_seed_out = gr.Textbox(label="Seed Used", interactive=False, show_copy_button=True)
+                    inp_seed_out = make_seed_output()
                     inp_selected_idx = gr.State(value=0)
                     inp_auto_mask_state = gr.State(value=None)
 
@@ -661,9 +669,12 @@ launch_kwargs = {"share": True, "debug": True}
 if major_v >= 6:
     launch_kwargs["theme"] = zfooocus_theme
     launch_kwargs["css"] = CSS
+    launch_kwargs["head"] = JS_CUSTOM
 elif "theme" in inspect.signature(demo.launch).parameters:
     launch_kwargs["theme"] = zfooocus_theme
     if "css" in inspect.signature(demo.launch).parameters:
         launch_kwargs["css"] = CSS
+    if "head" in inspect.signature(demo.launch).parameters:
+        launch_kwargs["head"] = JS_CUSTOM
 
 demo.launch(**launch_kwargs)
