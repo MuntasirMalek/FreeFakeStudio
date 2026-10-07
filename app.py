@@ -389,7 +389,8 @@ CSS = """
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
 .gradio-container {
     font-family: 'Inter', -apple-system, sans-serif !important;
-    max-width: 1400px !important;
+    max-width: 100% !important;
+    width: 100% !important;
 }
 .main-title { text-align:center; font-size:2.8em; font-weight:800; margin:0 0 4px 0; }
 .main-title span {

@@ -158,6 +158,7 @@
   }
 
   function showStudio(url) {
+    document.body.classList.add('in-studio');
     if (launcherView) launcherView.classList.remove('active');
     if (studioView) studioView.classList.add('active');
 
@@ -182,6 +183,7 @@
   }
 
   function showLauncher() {
+    document.body.classList.remove('in-studio');
     if (studioView) studioView.classList.remove('active');
     if (launcherView) launcherView.classList.add('active');
 

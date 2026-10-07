@@ -406,6 +406,63 @@ body {
   overflow: hidden;
 }
 
+/* ── Full-Fit Studio View (Eliminate outer gaps) ──────────── */
+body.in-studio,
+body:has(#studio-view.active) {
+  height: 100vh;
+  overflow: hidden;
+}
+
+body.in-studio .navbar,
+body:has(#studio-view.active) .navbar {
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+body.in-studio .nav-container,
+body:has(#studio-view.active) .nav-container {
+  max-width: 100%;
+  padding: 6px 14px;
+}
+
+body.in-studio .main-content,
+body:has(#studio-view.active) .main-content {
+  max-width: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 4px 10px 8px;
+  height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+body.in-studio #studio-view,
+body:has(#studio-view.active) #studio-view {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  min-height: 0;
+}
+
+body.in-studio .studio-header,
+body:has(#studio-view.active) .studio-header {
+  padding: 6px 12px;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  flex-shrink: 0;
+}
+
+body.in-studio .studio-frame-container,
+body:has(#studio-view.active) .studio-frame-container {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+}
+
 .frame-loader {
   position: absolute;
   inset: 0;
