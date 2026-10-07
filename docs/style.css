@@ -820,6 +820,21 @@ body {
   box-shadow: 0 0 12px rgba(37, 99, 235, 0.3);
 }
 
+.badge-rec-pill {
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  padding: 2px 7px;
+  border-radius: 9999px;
+  margin-left: 6px;
+  display: inline-flex;
+  align-items: center;
+}
+
 /* ── Advanced Models Grid ────────────────────────────────── */
 .models-grid-advanced {
   display: flex;
@@ -978,6 +993,13 @@ body {
   border-color: rgba(16, 185, 129, 0.3);
 }
 
+.badge-rec {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.45);
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.25);
+}
+
 .model-desc {
   font-size: 0.88rem;
   color: var(--text-muted);
@@ -1011,6 +1033,14 @@ body {
   background: rgba(59, 130, 246, 0.08);
   color: #93c5fd;
   border-color: rgba(59, 130, 246, 0.2);
+}
+
+.spec-pill.tag-rec {
+  font-family: inherit;
+  font-weight: 800;
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.35);
 }
 
 /* ── Launch Action Box ───────────────────────────────────── */
