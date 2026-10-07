@@ -72,6 +72,25 @@ def ensure_model_files(model_name):
         return
     for d in [DIFF, CLIP, TXTENC, VAE]:
         os.makedirs(d, exist_ok=True)
+
+    # Ensure ComfyUI-GGUF if needed by model
+    if model_name in ["🔮 FLUX.2-klein 9B", "🎨 Qwen-Image-Edit", "🖌️ ERNIE-Image Turbo"]:
+        gguf_dir = '/content/ComfyUI/custom_nodes/ComfyUI-GGUF'
+        if not os.path.exists(gguf_dir):
+            import subprocess
+            print("⏳ Setting up ComfyUI-GGUF support...")
+            subprocess.run(["git", "clone", "--depth", "1", "https://github.com/city96/ComfyUI-GGUF.git", gguf_dir], check=False)
+            subprocess.run([sys.executable, "-m", "pip", "install", "-q", "gguf"], check=False)
+
+    # Ensure diffusers if Qwen needs it
+    if model_name == "🎨 Qwen-Image-Edit":
+        try:
+            import diffusers
+        except ImportError:
+            import subprocess
+            print("⏳ Installing diffusers for Qwen VAE...")
+            subprocess.run([sys.executable, "-m", "pip", "install", "-q", "diffusers>=0.31.0"], check=False)
+
     for url, dest_dir, name in _MODEL_DOWNLOADS[model_name]:
         path = os.path.join(dest_dir, name)
         if not (os.path.exists(path) and os.path.getsize(path) > 1024):
