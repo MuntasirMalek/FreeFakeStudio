@@ -33,8 +33,76 @@ _ENGINE_MAP = {
     "🖌️ ERNIE-Image Turbo": engine_ernie_image_turbo,
 }
 
+DIFF   = '/content/ComfyUI/models/diffusion_models'
+CLIP   = '/content/ComfyUI/models/clip'
+TXTENC = '/content/ComfyUI/models/text_encoders'
+VAE    = '/content/ComfyUI/models/vae'
+
+_MODEL_DOWNLOADS = {
+    "⚡ Z-Image Turbo": [
+        ('https://huggingface.co/T5B/Z-Image-Turbo-FP8/resolve/main/z-image-turbo-fp8-e4m3fn.safetensors', DIFF, 'z-image-turbo-fp8-e4m3fn.safetensors'),
+        ('https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/text_encoders/qwen_3_4b.safetensors', CLIP, 'qwen_3_4b.safetensors'),
+        ('https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/vae/ae.safetensors', VAE, 'ae.safetensors'),
+    ],
+    "🌊 FLUX.2-klein 4B": [
+        ('https://huggingface.co/Comfy-Org/vae-text-encorder-for-flux-klein-9b/resolve/main/split_files/vae/flux2-vae.safetensors', VAE, 'flux2-vae.safetensors'),
+        ('https://huggingface.co/black-forest-labs/FLUX.2-klein-4B/resolve/main/flux-2-klein-4b.safetensors', DIFF, 'flux-2-klein-4b.safetensors'),
+        ('https://huggingface.co/Comfy-Org/vae-text-encorder-for-flux-klein-4b/resolve/main/split_files/text_encoders/qwen_3_4b_fp4_flux2.safetensors', TXTENC, 'qwen_3_4b_fp4_flux2.safetensors'),
+    ],
+    "🔮 FLUX.2-klein 9B": [
+        ('https://huggingface.co/Comfy-Org/vae-text-encorder-for-flux-klein-9b/resolve/main/split_files/vae/flux2-vae.safetensors', VAE, 'flux2-vae.safetensors'),
+        ('https://huggingface.co/black-forest-labs/FLUX.2-klein-9b-kv-fp8/resolve/main/flux-2-klein-9b-kv-fp8.safetensors', DIFF, 'flux-2-klein-9b-kv-fp8.safetensors'),
+        ('https://huggingface.co/unsloth/Qwen3-8B-GGUF/resolve/main/Qwen3-8B-Q2_K_L.gguf', TXTENC, 'Qwen3-8B-Q2_K_L.gguf'),
+    ],
+    "🎨 Qwen-Image-Edit": [
+        ('https://huggingface.co/unsloth/Qwen-Image-Edit-2511-GGUF/resolve/main/qwen-image-edit-2511-Q3_K_M.gguf', DIFF, 'qwen-image-edit-2511-Q3_K_M.gguf'),
+        ('https://huggingface.co/unsloth/Qwen2.5-VL-7B-Instruct-GGUF/resolve/main/Qwen2.5-VL-7B-Instruct-Q3_K_M.gguf', CLIP, 'Qwen2.5-VL-7B-Instruct-Q3_K_M.gguf'),
+        ('https://huggingface.co/unsloth/Qwen2.5-VL-7B-Instruct-GGUF/resolve/main/mmproj-F16.gguf', CLIP, 'Qwen2.5-VL-7B-Instruct-mmproj-F16.gguf'),
+        ('https://huggingface.co/Qwen/Qwen-Image-Edit-2511/resolve/main/vae/diffusion_pytorch_model.safetensors', VAE, 'qwen_image_vae.safetensors'),
+    ],
+    "🖌️ ERNIE-Image Turbo": [
+        ('https://huggingface.co/unsloth/ERNIE-Image-Turbo-GGUF/resolve/main/ernie-image-turbo-Q6_K.gguf', DIFF, 'ernie-image-turbo-Q6_K.gguf'),
+        ('https://huggingface.co/Comfy-Org/ERNIE-Image/resolve/main/text_encoders/ministral-3-3b.safetensors', TXTENC, 'ministral-3-3b.safetensors'),
+        ('https://huggingface.co/Comfy-Org/ERNIE-Image/resolve/main/vae/flux2-vae.safetensors', VAE, 'flux2-vae.safetensors'),
+    ],
+}
+
+def ensure_model_files(model_name):
+    if model_name not in _MODEL_DOWNLOADS:
+        return
+    for d in [DIFF, CLIP, TXTENC, VAE]:
+        os.makedirs(d, exist_ok=True)
+    for url, dest_dir, name in _MODEL_DOWNLOADS[model_name]:
+        path = os.path.join(dest_dir, name)
+        if not (os.path.exists(path) and os.path.getsize(path) > 1024):
+            print(f"⏳ Downloading missing model file {name}...")
+            if hasattr(gr, "Info"):
+                try:
+                    gr.Info(f"Downloading {model_name} in background (~1-2 min)...")
+                except:
+                    pass
+            import subprocess
+            subprocess.run(["aria2c", "--console-log-level=error", "-c", "-x", "16", "-s", "16", "-k", "1M", url, "-d", dest_dir, "-o", name], check=True)
+            print(f"✅ Downloaded {name}")
+    import glob
+    for f in glob.glob(f'{CLIP}/*'):
+        link = os.path.join(TXTENC, os.path.basename(f))
+        if not os.path.exists(link):
+            try:
+                os.symlink(f, link)
+            except:
+                pass
+    for f in glob.glob(f'{TXTENC}/*'):
+        link = os.path.join(CLIP, os.path.basename(f))
+        if not os.path.exists(link):
+            try:
+                os.symlink(f, link)
+            except:
+                pass
+
 def _ensure_model(model_name):
     global _current_model
+    ensure_model_files(model_name)
     engine = _ENGINE_MAP[model_name]
     if engine.is_loaded():
         return engine

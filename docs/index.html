@@ -6,7 +6,7 @@
   <title>FreeFakeStudio — Free AI Image Studio</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -32,25 +32,69 @@
   <!-- Main Content -->
   <main class="main-content">
     
-    <!-- State 1: Ultra Minimal Launcher -->
+    <!-- State 1: Launcher with Model Checkboxes -->
     <section id="launcher-view" class="view active">
       <div class="minimal-launcher">
         <h2 class="minimal-title">Create AI Art for Free</h2>
         
         <div class="launcher-box">
-          <div class="form-group">
-            <label for="model-selector">Choose Model</label>
-            <select id="model-selector" class="select-input">
-              <option value="z_image" selected>⚡ Z-Image Turbo (Fastest ~1 min)</option>
-              <option value="flux_4b">🌊 FLUX.2-klein 4B</option>
-              <option value="flux_9b">🔮 FLUX.2-klein 9B</option>
-              <option value="qwen">🎨 Qwen-Image-Edit</option>
-              <option value="ernie">🖌️ ERNIE-Image Turbo</option>
-            </select>
+          <div class="models-header">
+            <label class="models-label">Select Models (pick 1 or multiple):</label>
+            <div class="quick-select-btns">
+              <button type="button" id="select-fast-btn" class="pill-btn active">⚡ Fast Only</button>
+              <button type="button" id="select-all-btn" class="pill-btn">✨ Select All</button>
+            </div>
+          </div>
+
+          <div class="models-grid">
+            <label class="model-checkbox-item">
+              <input type="checkbox" name="model" value="⚡ Z-Image Turbo" checked>
+              <span class="checkmark"></span>
+              <div class="model-info">
+                <strong>⚡ Z-Image Turbo</strong>
+                <small>Fastest generation (8 steps, ~1 min)</small>
+              </div>
+            </label>
+
+            <label class="model-checkbox-item">
+              <input type="checkbox" name="model" value="🌊 FLUX.2-klein 4B">
+              <span class="checkmark"></span>
+              <div class="model-info">
+                <strong>🌊 FLUX.2-klein 4B</strong>
+                <small>Photorealistic &amp; general purpose</small>
+              </div>
+            </label>
+
+            <label class="model-checkbox-item">
+              <input type="checkbox" name="model" value="🔮 FLUX.2-klein 9B">
+              <span class="checkmark"></span>
+              <div class="model-info">
+                <strong>🔮 FLUX.2-klein 9B</strong>
+                <small>Maximum high-res detail</small>
+              </div>
+            </label>
+
+            <label class="model-checkbox-item">
+              <input type="checkbox" name="model" value="🎨 Qwen-Image-Edit">
+              <span class="checkmark"></span>
+              <div class="model-info">
+                <strong>🎨 Qwen-Image-Edit</strong>
+                <small>Conversational image editing</small>
+              </div>
+            </label>
+
+            <label class="model-checkbox-item">
+              <input type="checkbox" name="model" value="🖌️ ERNIE-Image Turbo">
+              <span class="checkmark"></span>
+              <div class="model-info">
+                <strong>🖌️ ERNIE-Image Turbo</strong>
+                <small>Baidu turbo text-to-image</small>
+              </div>
+            </label>
           </div>
 
           <a id="colab-launch-btn" href="https://colab.research.google.com/github/MuntasirMalek/FreeFakeStudio/blob/main/FreeFakeStudio_1Click.ipynb" target="_blank" class="btn btn-primary btn-giant btn-pulse">
-            <span>🚀 START STUDIO ▶️</span>
+            <span>🚀 START FREE GPU ▶️</span>
           </a>
 
           <div class="quick-connect">
@@ -73,7 +117,7 @@
         </div>
         <div class="studio-controls">
           <button id="open-newtab-btn" class="btn btn-sm btn-outline">↗ New Tab</button>
-          <button id="switch-engine-btn" class="btn btn-sm btn-ghost">Change</button>
+          <button id="switch-engine-btn" class="btn btn-sm btn-ghost">Change Models</button>
         </div>
       </div>
 

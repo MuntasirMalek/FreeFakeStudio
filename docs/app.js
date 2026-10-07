@@ -16,43 +16,90 @@
   const openNewtabBtn = document.getElementById('open-newtab-btn');
   const switchEngineBtn = document.getElementById('switch-engine-btn');
 
-  const modelSelector = document.getElementById('model-selector');
-  const modelHint = document.getElementById('model-hint');
-  const colabLaunchBtn = document.getElementById('colab-launch-btn');
+  const selectFastBtn = document.getElementById('select-fast-btn');
+  const selectAllBtn = document.getElementById('select-all-btn');
+  const modelCheckboxes = document.querySelectorAll('input[name="model"]');
+
   const manualUrlInput = document.getElementById('manual-url');
   const manualConnectBtn = document.getElementById('manual-connect-btn');
 
   const STORAGE_KEY = 'freefake_backend_url';
-
-  // Hints per model
-  const MODEL_HINTS = {
-    z_image: "⚡ Recommended for first-time users. Takes only ~1.5 minutes to boot on Colab (8 steps).",
-    flux_4b: "🌊 Photorealistic all-rounder. Great for text-to-image and inpainting (~11 GB download).",
-    flux_9b: "🔮 Ultra detailed high-resolution FP8 model (~13 GB download).",
-    qwen: "🎨 Conversational AI image editing. Describe changes in natural language (~15 GB download).",
-    ernie: "🖌️ Baidu's turbo text-to-image model. Strong text rendering (~9 GB download)."
-  };
-
-  // Base Colab URL
-  const COLAB_NOTEBOOK_URL = "https://colab.research.google.com/github/MuntasirMalek/FreeFakeStudio/blob/main/FreeFakeStudio_1Click.ipynb";
+  const MODELS_STORAGE_KEY = 'freefake_selected_models';
 
   // Initialize
   function init() {
-    setupModelSelector();
+    setupModelCheckboxes();
     setupListeners();
     checkConnection();
   }
 
-  function setupModelSelector() {
-    if (!modelSelector) return;
-    modelSelector.addEventListener('change', (e) => {
-      const selected = e.target.value;
-      if (MODEL_HINTS[selected]) {
-        modelHint.textContent = MODEL_HINTS[selected];
+  function setupModelCheckboxes() {
+    // Restore saved checkbox preferences if available
+    try {
+      const saved = JSON.parse(localStorage.getItem(MODELS_STORAGE_KEY));
+      if (Array.isArray(saved) && saved.length > 0) {
+        modelCheckboxes.forEach((cb) => {
+          cb.checked = saved.includes(cb.value);
+        });
       }
-      // Update Colab URL with parameter hash
-      colabLaunchBtn.href = `${COLAB_NOTEBOOK_URL}#model=${encodeURIComponent(selected)}`;
+    } catch (e) {}
+
+    modelCheckboxes.forEach((cb) => {
+      updateCardStyle(cb);
+      cb.addEventListener('change', () => {
+        // Guarantee at least one model is selected
+        const anyChecked = Array.from(modelCheckboxes).some(c => c.checked);
+        if (!anyChecked) {
+          cb.checked = true;
+        }
+        updateCardStyle(cb);
+        if (selectFastBtn) selectFastBtn.classList.remove('active');
+        if (selectAllBtn) selectAllBtn.classList.remove('active');
+        saveSelectedModels();
+      });
     });
+
+    if (selectFastBtn) {
+      selectFastBtn.addEventListener('click', () => {
+        modelCheckboxes.forEach((cb) => {
+          cb.checked = (cb.value === '⚡ Z-Image Turbo');
+          updateCardStyle(cb);
+        });
+        selectFastBtn.classList.add('active');
+        if (selectAllBtn) selectAllBtn.classList.remove('active');
+        saveSelectedModels();
+      });
+    }
+
+    if (selectAllBtn) {
+      selectAllBtn.addEventListener('click', () => {
+        modelCheckboxes.forEach((cb) => {
+          cb.checked = true;
+          updateCardStyle(cb);
+        });
+        selectAllBtn.classList.add('active');
+        if (selectFastBtn) selectFastBtn.classList.remove('active');
+        saveSelectedModels();
+      });
+    }
+  }
+
+  function updateCardStyle(cb) {
+    const parent = cb.closest('.model-checkbox-item');
+    if (parent) {
+      if (cb.checked) {
+        parent.classList.add('checked');
+      } else {
+        parent.classList.remove('checked');
+      }
+    }
+  }
+
+  function saveSelectedModels() {
+    const selected = Array.from(modelCheckboxes)
+      .filter(c => c.checked)
+      .map(c => c.value);
+    localStorage.setItem(MODELS_STORAGE_KEY, JSON.stringify(selected));
   }
 
   function setupListeners() {
@@ -113,18 +160,14 @@
     if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
       cleanUrl = 'https://' + cleanUrl;
     }
-    // Remove trailing slash
     cleanUrl = cleanUrl.replace(/\/+$/, '');
 
-    // Save
     localStorage.setItem(STORAGE_KEY, cleanUrl);
 
-    // Update query string cleanly without reload
     const currentUrl = new URL(window.location);
     currentUrl.searchParams.set('backend', cleanUrl);
     window.history.replaceState({}, '', currentUrl);
 
-    // Switch UI
     showStudio(cleanUrl);
   }
 
@@ -132,18 +175,15 @@
     launcherView.classList.remove('active');
     studioView.classList.add('active');
 
-    // Update status indicator
     connectionStatus.className = 'status-pill status-connected';
-    statusText.textContent = 'GPU Connected';
+    statusText.textContent = 'GPU Active';
     disconnectBtn.classList.remove('hidden');
 
     backendDisplay.textContent = url.replace(/^https?:\/\//, '');
 
-    // Show spinner while iframe loads
     frameLoader.classList.remove('fade-out');
     loaderStatus.textContent = 'Loading your FreeFakeStudio interface...';
 
-    // Set iframe source
     if (studioIframe.src !== url) {
       studioIframe.src = url;
     } else {
@@ -156,7 +196,7 @@
     launcherView.classList.add('active');
 
     connectionStatus.className = 'status-pill status-disconnected';
-    statusText.textContent = 'GPU Disconnected';
+    statusText.textContent = 'Disconnected';
     disconnectBtn.classList.add('hidden');
 
     studioIframe.src = 'about:blank';
@@ -165,7 +205,6 @@
   function disconnect() {
     localStorage.removeItem(STORAGE_KEY);
     
-    // Clear URL search params
     const currentUrl = new URL(window.location);
     currentUrl.searchParams.delete('backend');
     currentUrl.searchParams.delete('api');
