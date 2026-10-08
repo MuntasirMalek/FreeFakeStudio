@@ -10,14 +10,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-          lfs: true
+          fetch-depth: 1
       - name: Push to Hugging Face Space
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           if [ -n "$HF_TOKEN" ]; then
-            git push https://MuntasirUtsho:$HF_TOKEN@huggingface.co/spaces/MuntasirUtsho/FreeFakeStudio main:main --force
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git checkout --orphan hf-deploy
+            git add -A
+            git commit -m "Deploy to Hugging Face Spaces"
+            git push https://MuntasirUtsho:$HF_TOKEN@huggingface.co/spaces/MuntasirUtsho/FreeFakeStudio hf-deploy:main --force
           else
             echo "HF_TOKEN secret is not set. Skipping sync."
           fi
