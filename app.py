@@ -33,10 +33,28 @@ _ENGINE_MAP = {
     "🖌️ ERNIE-Image Turbo": engine_ernie_image_turbo,
 }
 
-DIFF   = '/content/ComfyUI/models/diffusion_models'
-CLIP   = '/content/ComfyUI/models/clip'
-TXTENC = '/content/ComfyUI/models/text_encoders'
-VAE    = '/content/ComfyUI/models/vae'
+def _detect_comfy_dir():
+    if os.environ.get("COMFY_DIR") and os.path.exists(os.environ["COMFY_DIR"]):
+        return os.environ["COMFY_DIR"]
+    for candidate in [
+        "/content/ComfyUI",
+        "/kaggle/working/ComfyUI",
+        os.path.abspath("./ComfyUI"),
+        os.path.expanduser("~/ComfyUI"),
+    ]:
+        if os.path.exists(candidate):
+            return candidate
+    return os.path.abspath("./ComfyUI")
+
+COMFY_DIR = _detect_comfy_dir()
+os.environ["COMFY_DIR"] = COMFY_DIR
+if COMFY_DIR not in sys.path:
+    sys.path.insert(0, COMFY_DIR)
+
+DIFF   = os.path.join(COMFY_DIR, 'models', 'diffusion_models')
+CLIP   = os.path.join(COMFY_DIR, 'models', 'clip')
+TXTENC = os.path.join(COMFY_DIR, 'models', 'text_encoders')
+VAE    = os.path.join(COMFY_DIR, 'models', 'vae')
 
 _MODEL_DOWNLOADS = {
     "⚡ Z-Image Turbo": [
@@ -70,12 +88,17 @@ _MODEL_DOWNLOADS = {
 def ensure_model_files(model_name):
     if model_name not in _MODEL_DOWNLOADS:
         return
+    if not os.path.exists(COMFY_DIR):
+        print(f"⏳ ComfyUI not found at {COMFY_DIR}. Auto-cloning ComfyUI Core...")
+        import subprocess
+        subprocess.run(["git", "clone", "--depth", "1", "https://github.com/comfyanonymous/ComfyUI.git", COMFY_DIR], check=False)
+
     for d in [DIFF, CLIP, TXTENC, VAE]:
         os.makedirs(d, exist_ok=True)
 
     # Ensure ComfyUI-GGUF if needed by model
     if model_name in ["🔮 FLUX.2-klein 9B", "🎨 Qwen-Image-Edit", "🖌️ ERNIE-Image Turbo"]:
-        gguf_dir = '/content/ComfyUI/custom_nodes/ComfyUI-GGUF'
+        gguf_dir = os.path.join(COMFY_DIR, 'custom_nodes', 'ComfyUI-GGUF')
         if not os.path.exists(gguf_dir):
             import subprocess
             print("⏳ Setting up ComfyUI-GGUF support...")
@@ -101,7 +124,16 @@ def ensure_model_files(model_name):
                 except:
                     pass
             import subprocess
-            subprocess.run(["aria2c", "--console-log-level=error", "-c", "-x", "16", "-s", "16", "-k", "1M", url, "-d", dest_dir, "-o", name], check=True)
+            dl_ok = False
+            try:
+                subprocess.run(["aria2c", "--console-log-level=error", "-c", "-x", "16", "-s", "16", "-k", "1M", url, "-d", dest_dir, "-o", name], check=True)
+                dl_ok = True
+            except Exception:
+                pass
+            if not dl_ok or not os.path.exists(path) or os.path.getsize(path) <= 1024:
+                import urllib.request
+                print(f"⬇️ Downloading via HTTP fallback: {name}...")
+                urllib.request.urlretrieve(url, path)
             print(f"✅ Downloaded {name}")
     import glob
     for f in glob.glob(f'{CLIP}/*'):
@@ -735,7 +767,7 @@ _model_files = {
     "🔮 FLUX.2-klein 9B": "flux-2-klein-9b-kv-fp8.safetensors",
     "🖌️ ERNIE-Image Turbo": "ernie-image-turbo-Q6_K.gguf",
 }
-_diff_dir = "/content/ComfyUI/models/diffusion_models"
+_diff_dir = DIFF
 for _name, _file in _model_files.items():
     if os.path.exists(os.path.join(_diff_dir, _file)):
         try:
@@ -747,7 +779,12 @@ for _name, _file in _model_files.items():
 else:
     print("⚠️ No pre-loaded model — select one from the dropdown to load on first use")
 
-launch_kwargs = {"share": True, "debug": True}
+is_spaces = "SPACE_ID" in os.environ or os.getenv("SYSTEM") == "spaces"
+launch_kwargs = {"share": not is_spaces, "debug": True}
+if is_spaces:
+    launch_kwargs["server_name"] = "0.0.0.0"
+    launch_kwargs["server_port"] = 7860
+
 if major_v >= 6:
     launch_kwargs["theme"] = zfooocus_theme
     launch_kwargs["css"] = CSS

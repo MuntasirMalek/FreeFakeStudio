@@ -17,9 +17,11 @@ _nodes = {}
 def _get_nodes():
     global _nodes
     if not _nodes:
-        import sys
-        if "/content/ComfyUI" not in sys.path:
-            sys.path.insert(0, "/content/ComfyUI")
+        import sys, os
+        comfy_dir = os.environ.get("COMFY_DIR", "/content/ComfyUI")
+        for p in [comfy_dir, "/content/ComfyUI", "/kaggle/working/ComfyUI", os.path.abspath("./ComfyUI")]:
+            if os.path.exists(p) and p not in sys.path:
+                sys.path.insert(0, p)
         from nodes import NODE_CLASS_MAPPINGS
 
         # Import ComfyUI-GGUF nodes specifically
@@ -86,8 +88,9 @@ def load():
         # Load GGUF CLIP (Single Qwen3 8B, no T5 needed for klein)
         # Q2_K saves ~0.8GB vs Q3_K_M — needed to stay under 15GB T4 VRAM
         import os
-        clip_dir = "/content/ComfyUI/models/clip"
-        txt_dir = "/content/ComfyUI/models/text_encoders"
+        comfy_dir = os.environ.get("COMFY_DIR", "/content/ComfyUI")
+        clip_dir = os.path.join(comfy_dir, "models", "clip")
+        txt_dir = os.path.join(comfy_dir, "models", "text_encoders")
         clip_name = "Qwen3-8B-Q2_K_L.gguf"
         for candidate in ["Qwen3-8B-Q2_K_L.gguf", "Qwen3-8B-Q3_K_M.gguf", "Qwen3-8B-Q2_K.gguf"]:
             if (os.path.exists(os.path.join(clip_dir, candidate)) or

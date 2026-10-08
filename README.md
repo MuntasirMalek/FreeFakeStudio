@@ -1,12 +1,25 @@
+---
+title: FreeFakeStudio
+emoji: 🎭
+colorFrom: green
+colorTo: emerald
+sdk: gradio
+sdk_version: 5.20.0
+app_file: app.py
+pinned: false
+license: apache-2.0
+short_description: Multi-Model AI Image Studio (FLUX, Qwen, Z-Image, ERNIE)
+---
+
 # 🎭 FreeFakeStudio
 
-**Open-source Multi-Model AI Image Studio** — Generate, Img2Img & Inpaint with FLUX, Qwen, Z-Image, ERNIE-Image and many more to come. Zero-setup for Google Colab.
+**Open-source Multi-Model AI Image Studio** — Generate, Img2Img & Inpaint with FLUX, Qwen, Z-Image, ERNIE-Image and many more to come. Zero-setup for Google Colab, Kaggle, and Hugging Face.
 
 [![Web App](https://img.shields.io/badge/🌐_Web_App-Live_Demo-3b82f6?style=for-the-badge)](https://muntasirmalek.github.io/FreeFakeStudio/)
 [![1-Click Colab](https://img.shields.io/badge/⚡_1--Click_Colab-T4_GPU-f59e0b?style=for-the-badge&logo=googlecolab)](https://colab.research.google.com/github/MuntasirMalek/FreeFakeStudio/blob/main/FreeFakeStudio_1Click.ipynb)
 [![Classic Colab](https://img.shields.io/badge/Open_In_Colab-Classic_Studio-2563eb?style=for-the-badge&logo=googlecolab)](https://colab.research.google.com/github/MuntasirMalek/FreeFakeStudio/blob/main/FreeFakeStudio.ipynb)
 [![Kaggle GPU](https://img.shields.io/badge/Kaggle-GPU_Edition-20beff?style=for-the-badge&logo=kaggle)](https://www.kaggle.com/code/new)
-[![Hugging Face](https://img.shields.io/badge/🤗_Hugging_Face-Spaces_Demo-ffd21e?style=for-the-badge&logo=huggingface&logoColor=black)](https://huggingface.co/new-space)
+[![Hugging Face](https://img.shields.io/badge/🤗_Hugging_Face-Live_Space-ffd21e?style=for-the-badge&logo=huggingface&logoColor=black)](https://huggingface.co/spaces/MuntasirUtsho/FreeFakeStudio)
 
 ---
 
@@ -14,10 +27,10 @@
 
 | Edition | Best For | How to Launch |
 | :--- | :--- | :--- |
-| 🌐 **1-Click Web Edition** *(New!)* | Beginners, Students & Classrooms | [Open Web App](https://muntasirmalek.github.io/FreeFakeStudio/) $\rightarrow$ Click 1-Button Run |
+| 🌐 **1-Click Web Edition** | Beginners, Students & Classrooms | [Open Web App](https://muntasirmalek.github.io/FreeFakeStudio/) $\rightarrow$ Click 1-Button Run |
 | 📓 **Classic Colab Studio** | Advanced Colab users | [Open Notebook](https://colab.research.google.com/github/MuntasirMalek/FreeFakeStudio/blob/main/FreeFakeStudio.ipynb) $\rightarrow$ Step 1 & Step 2 |
-| 🦅 **Kaggle GPU Edition** *(New!)* | Kaggle users (30h/wk free GPU) | [Create on Kaggle](https://www.kaggle.com/code/new) $\rightarrow$ **File** > **Import** > [Upload Notebook](https://raw.githubusercontent.com/MuntasirMalek/FreeFakeStudio/main/FreeFakeStudio_Kaggle.ipynb) |
-| 🤗 **Hugging Face Spaces** *(New!)* | 24/7 Live Hosted Demo & ZeroGPU | [Create Space on Hugging Face](https://huggingface.co/new-space) $\rightarrow$ Select Gradio SDK |
+| 🦅 **Kaggle GPU Edition** | Kaggle users (30h/wk free GPU) | [Create on Kaggle](https://www.kaggle.com/code/new) $\rightarrow$ **File** > **Import** > [Upload Notebook](https://raw.githubusercontent.com/MuntasirMalek/FreeFakeStudio/main/FreeFakeStudio_Kaggle.ipynb) |
+| 🤗 **Hugging Face Spaces** | 24/7 Live Hosted Demo & ZeroGPU | [Open HF Space](https://huggingface.co/spaces/MuntasirUtsho/FreeFakeStudio) $\rightarrow$ Instant access |
 
 ## Features
 

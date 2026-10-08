@@ -17,8 +17,11 @@ _nodes = {}
 def _get_nodes():
     global _nodes
     if not _nodes:
-        import sys
-        sys.path.insert(0, "/content/ComfyUI")
+        import sys, os
+        comfy_dir = os.environ.get("COMFY_DIR", "/content/ComfyUI")
+        for p in [comfy_dir, "/content/ComfyUI", "/kaggle/working/ComfyUI", os.path.abspath("./ComfyUI")]:
+            if os.path.exists(p) and p not in sys.path:
+                sys.path.insert(0, p)
         from nodes import NODE_CLASS_MAPPINGS
         _nodes = {
             "UNETLoader":       NODE_CLASS_MAPPINGS["UNETLoader"](),

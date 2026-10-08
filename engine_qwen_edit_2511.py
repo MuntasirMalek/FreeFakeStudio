@@ -19,9 +19,11 @@ _nodes = {}
 def _get_nodes():
     global _nodes
     if not _nodes:
-        import sys
-        if "/content/ComfyUI" not in sys.path:
-            sys.path.insert(0, "/content/ComfyUI")
+        import sys, os
+        comfy_dir = os.environ.get("COMFY_DIR", "/content/ComfyUI")
+        for p in [comfy_dir, "/content/ComfyUI", "/kaggle/working/ComfyUI", os.path.abspath("./ComfyUI")]:
+            if os.path.exists(p) and p not in sys.path:
+                sys.path.insert(0, p)
         from nodes import NODE_CLASS_MAPPINGS
 
         try:
@@ -60,9 +62,10 @@ def load():
             "qwen-image-edit-2511-Q3_K_M.gguf",
             "qwen-image-edit-2511-Q3_K_S.gguf",
         ]
+        comfy_dir = os.environ.get("COMFY_DIR", "/content/ComfyUI")
         _unet_file = None
         for u in _unet_candidates:
-            _unet_path = os.path.join("/content/ComfyUI/models/diffusion_models", u)
+            _unet_path = os.path.join(comfy_dir, "models", "diffusion_models", u)
             if os.path.exists(_unet_path):
                 _unet_file = u
                 break
@@ -80,7 +83,7 @@ def load():
         ]
         _clip_file = None
         for c in _clip_candidates:
-            _clip_path = os.path.join("/content/ComfyUI/models/clip", c)
+            _clip_path = os.path.join(comfy_dir, "models", "clip", c)
             if os.path.exists(_clip_path):
                 _clip_file = c
                 break
@@ -126,10 +129,10 @@ def load():
         import comfy.model_management as mm
 
         print("  ⏳ Loading Qwen VAE via diffusers...")
-        vae_local = "/content/ComfyUI/models/vae/qwen_image_vae.safetensors"
+        vae_local = os.path.join(comfy_dir, "models", "vae", "qwen_image_vae.safetensors")
 
         import json
-        vae_dir = "/content/qwen_vae_local"
+        vae_dir = os.path.join(comfy_dir, "qwen_vae_local")
         os.makedirs(vae_dir, exist_ok=True)
 
         vae_config = {

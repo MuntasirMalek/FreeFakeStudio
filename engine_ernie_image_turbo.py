@@ -16,9 +16,11 @@ _nodes = {}
 def _get_nodes():
     global _nodes
     if not _nodes:
-        import sys
-        if "/content/ComfyUI" not in sys.path:
-            sys.path.insert(0, "/content/ComfyUI")
+        import sys, os
+        comfy_dir = os.environ.get("COMFY_DIR", "/content/ComfyUI")
+        for p in [comfy_dir, "/content/ComfyUI", "/kaggle/working/ComfyUI", os.path.abspath("./ComfyUI")]:
+            if os.path.exists(p) and p not in sys.path:
+                sys.path.insert(0, p)
         from nodes import NODE_CLASS_MAPPINGS
 
         # Import ComfyUI-GGUF nodes via importlib (same approach as Qwen engine)
@@ -37,9 +39,9 @@ def _get_nodes():
 
         if "UnetLoaderGGUF" not in all_nodes:
             raise RuntimeError(
-                "ComfyUI-GGUF custom nodes not found! "
-                "Install them: git clone https://github.com/city96/ComfyUI-GGUF.git "
-                "/content/ComfyUI/custom_nodes/ComfyUI-GGUF"
+                f"ComfyUI-GGUF custom nodes not found! "
+                f"Install them: git clone https://github.com/city96/ComfyUI-GGUF.git "
+                f"{os.path.join(comfy_dir, 'custom_nodes', 'ComfyUI-GGUF')}"
             )
 
         _nodes = {
