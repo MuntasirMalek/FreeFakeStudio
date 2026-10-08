@@ -563,7 +563,7 @@ with gr.Blocks(**blocks_kwargs) as demo:
                     gen_prompt = gr.Textbox(
                         label="Prompt", lines=4,
                         placeholder="Describe the image you want...",
-                        value="A cinematic portrait of an astronaut riding a white horse across a golden wheat field at sunset, 8K, ultra detailed"
+                        value="A cinematic portrait of a Alien riding a white horse across a golden wheat field at sunset, 8K, ultra detailed"
                     )
                     with gr.Row():
                         gen_aspect = gr.Dropdown(ASPECTS, value="1024x1024 (1:1)", label="Aspect Ratio")
