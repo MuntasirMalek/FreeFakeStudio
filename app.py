@@ -568,7 +568,7 @@ with gr.Blocks(**blocks_kwargs) as demo:
                     with gr.Row():
                         gen_aspect = gr.Dropdown(ASPECTS, value="1024x1024 (1:1)", label="Aspect Ratio")
                         gen_seed = gr.Number(value=0, label="Seed (0 = random)", precision=0)
-                    gen_num = gr.Slider(1, 16, value=2, step=1, label="Number of Images")
+                    gen_num = gr.Slider(1, 16, value=1, step=1, label="Number of Images")
                     gen_steps = gr.Slider(1, 50, value=8, step=1, label="Steps")
                     gen_btn = gr.Button("🚀 Generate", variant="primary", size="lg")
                     with gr.Accordion("⚙️ Advanced", open=False):
@@ -600,7 +600,7 @@ with gr.Blocks(**blocks_kwargs) as demo:
                     i2i_img = gr.Image(type="pil", label="Upload Photo", sources=["upload"])
                     i2i_prompt = gr.Textbox(label="Prompt / Edit Instruction", lines=2,
                         placeholder="e.g., green background, tropical beach, studio lighting")
-                    i2i_num = gr.Slider(1, 16, value=2, step=1, label="Number of Images")
+                    i2i_num = gr.Slider(1, 16, value=1, step=1, label="Number of Images")
                     i2i_steps = gr.Slider(1, 50, value=8, step=1, label="Steps")
                     i2i_btn = gr.Button("✨ Transform", variant="primary", size="lg")
                     with gr.Accordion("⚙️ Advanced", open=False):
@@ -651,7 +651,7 @@ with gr.Blocks(**blocks_kwargs) as demo:
                                                    variant="secondary", visible=False)
                     inp_prompt = gr.Textbox(label="What should the masked area become?", lines=2,
                         placeholder="e.g., a tropical beach background")
-                    inp_num = gr.Slider(1, 16, value=2, step=1, label="Number of Images")
+                    inp_num = gr.Slider(1, 16, value=1, step=1, label="Number of Images")
                     inp_steps = gr.Slider(1, 50, value=8, step=1, label="Steps")
                     inp_btn = gr.Button("🎨 Inpaint", variant="primary", size="lg")
                     with gr.Accordion("⚙️ Advanced", open=False):
