@@ -18,7 +18,7 @@ def _get_nodes():
     if not _nodes:
         import sys, os
         comfy_dir = os.environ.get("COMFY_DIR", "/content/ComfyUI")
-        for p in [comfy_dir, "/content/ComfyUI", "/kaggle/working/ComfyUI", os.path.abspath("./ComfyUI")]:
+        for p in [comfy_dir, "/content/ComfyUI", "/kaggle/working/ComfyUI", os.path.abspath("./ComfyUI"), os.path.join(os.path.dirname(__file__), "ComfyUI")]:
             if os.path.exists(p) and p not in sys.path:
                 sys.path.insert(0, p)
         from nodes import NODE_CLASS_MAPPINGS

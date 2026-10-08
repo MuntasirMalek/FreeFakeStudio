@@ -48,11 +48,22 @@ def _detect_comfy_dir():
         "/content/ComfyUI",
         "/kaggle/working/ComfyUI",
         os.path.abspath("./ComfyUI"),
+        os.path.join(os.path.dirname(__file__), "ComfyUI"),
         os.path.expanduser("~/ComfyUI"),
     ]:
         if os.path.exists(candidate):
             return candidate
-    return os.path.abspath("./ComfyUI")
+
+    target = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ComfyUI")
+    if not os.path.exists(target):
+        print(f"⏳ ComfyUI not detected. Auto-cloning ComfyUI Core to {target}...")
+        import subprocess
+        try:
+            subprocess.run(["git", "clone", "--depth", "1", "https://github.com/comfyanonymous/ComfyUI.git", target], check=True)
+            print("✅ ComfyUI cloned successfully!")
+        except Exception as e:
+            print(f"⚠️ Could not auto-clone ComfyUI: {e}")
+    return target
 
 COMFY_DIR = _detect_comfy_dir()
 os.environ["COMFY_DIR"] = COMFY_DIR
@@ -628,6 +639,7 @@ with gr.Blocks(**blocks_kwargs) as demo:
             gen_btn.click(
                 lambda: ([], None, ""),
                 outputs=[gen_gallery, gen_dl, gen_seed_out]).then(
+                ensure_model_files, inputs=[gen_model]).then(
                 generate_image,
                 [gen_model, gen_prompt, gen_neg, gen_aspect, gen_seed, gen_cfg, gen_denoise, gen_num, gen_steps],
                 [gen_gallery, gen_dl, gen_seed_out])
@@ -662,6 +674,7 @@ with gr.Blocks(**blocks_kwargs) as demo:
             i2i_btn.click(
                 lambda: ([], None, ""),
                 outputs=[i2i_gallery, i2i_dl, i2i_seed_out]).then(
+                ensure_model_files, inputs=[i2i_model]).then(
                 do_img2img,
                 [i2i_model, i2i_img, i2i_prompt, i2i_neg, i2i_seed, i2i_cfg, i2i_denoise, i2i_num, i2i_steps],
                 [i2i_gallery, i2i_dl, i2i_seed_out])
@@ -751,6 +764,7 @@ with gr.Blocks(**blocks_kwargs) as demo:
             inp_btn.click(
                 lambda: ([], None, ""),
                 outputs=[inp_gallery, inp_dl, inp_seed_out]).then(
+                ensure_model_files, inputs=[inp_model]).then(
                 do_inpaint_wrapper,
                 [inp_model, inp_editor, inp_image, inp_prompt, inp_neg, inp_seed,
                  inp_cfg, inp_denoise, inp_num, inp_mask_mode, inp_auto_mask_state, inp_steps],
@@ -792,6 +806,13 @@ else:
     print("⚠️ No pre-loaded model — select one from the dropdown to load on first use")
 
 is_spaces = "SPACE_ID" in os.environ or os.getenv("SYSTEM") == "spaces"
+if is_spaces:
+    print("⏳ Hugging Face Space detected — pre-downloading default model (Z-Image Turbo)...")
+    try:
+        ensure_model_files("⚡ Z-Image Turbo")
+    except Exception as e:
+        print(f"⚠️ Pre-download notice: {e}")
+
 launch_kwargs = {"share": not is_spaces, "debug": True}
 if "ssr" in inspect.signature(demo.launch).parameters:
     launch_kwargs["ssr"] = False

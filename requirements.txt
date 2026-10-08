@@ -3,6 +3,9 @@ pydantic==2.10.6
 torch
 torchvision
 torchaudio
+torchsde
+alembic
+SQLAlchemy>=2.0.0
 numpy
 pillow
 opencv-python-headless
@@ -24,3 +27,10 @@ spandrel
 pyyaml
 aiohttp
 psutil
+filelock
+tqdm
+tokenizers
+av
+comfyui-frontend-package
+comfyui-workflow-templates
+comfyui-embedded-docs
