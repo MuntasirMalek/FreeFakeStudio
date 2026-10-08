@@ -6,7 +6,7 @@
 #  CLIP: qwen_3_4b.safetensors (same as Z-Image Turbo)
 # ============================================================
 
-import gc, torch, numpy as np
+import os, sys, gc, torch, numpy as np
 from PIL import Image, ImageFilter
 
 _loaded = False

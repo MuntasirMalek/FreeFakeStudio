@@ -4,7 +4,7 @@
 #  Uses ComfyUI nodes
 # ============================================================
 
-import gc, torch, numpy as np
+import os, sys, gc, torch, numpy as np
 from PIL import Image, ImageFilter
 
 _loaded = False

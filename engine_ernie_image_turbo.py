@@ -3,7 +3,7 @@
 #  Uses: UnetLoaderGGUF + Ministral 3.3B CLIP + Flux2 VAE
 #  8 inference steps, CFG 1.0, euler/simple
 # ============================================================
-import gc, torch, numpy as np
+import os, sys, gc, torch, numpy as np
 from PIL import Image
 
 _loaded = False
