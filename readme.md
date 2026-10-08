@@ -6,6 +6,7 @@
 [![1-Click Colab](https://img.shields.io/badge/⚡_1--Click_Colab-T4_GPU-f59e0b?style=for-the-badge&logo=googlecolab)](https://colab.research.google.com/github/MuntasirMalek/FreeFakeStudio/blob/main/FreeFakeStudio_1Click.ipynb)
 [![Classic Colab](https://img.shields.io/badge/Open_In_Colab-Classic_Studio-2563eb?style=for-the-badge&logo=googlecolab)](https://colab.research.google.com/github/MuntasirMalek/FreeFakeStudio/blob/main/FreeFakeStudio.ipynb)
 [![Kaggle GPU](https://img.shields.io/badge/Kaggle-GPU_Edition-20beff?style=for-the-badge&logo=kaggle)](https://www.kaggle.com/code/new)
+[![Hugging Face](https://img.shields.io/badge/🤗_Hugging_Face-Spaces_Demo-ffd21e?style=for-the-badge&logo=huggingface&logoColor=black)](https://huggingface.co/new-space)
 
 ---
 
@@ -16,6 +17,7 @@
 | 🌐 **1-Click Web Edition** *(New!)* | Beginners, Students & Classrooms | [Open Web App](https://muntasirmalek.github.io/FreeFakeStudio/) $\rightarrow$ Click 1-Button Run |
 | 📓 **Classic Colab Studio** | Advanced Colab users | [Open Notebook](https://colab.research.google.com/github/MuntasirMalek/FreeFakeStudio/blob/main/FreeFakeStudio.ipynb) $\rightarrow$ Step 1 & Step 2 |
 | 🦅 **Kaggle GPU Edition** *(New!)* | Kaggle users (30h/wk free GPU) | [Create on Kaggle](https://www.kaggle.com/code/new) $\rightarrow$ **File** > **Import** > [Upload Notebook](https://raw.githubusercontent.com/MuntasirMalek/FreeFakeStudio/main/FreeFakeStudio_Kaggle.ipynb) |
+| 🤗 **Hugging Face Spaces** *(New!)* | 24/7 Live Hosted Demo & ZeroGPU | [Create Space on Hugging Face](https://huggingface.co/new-space) $\rightarrow$ Select Gradio SDK |
 
 ## Features
 
