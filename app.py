@@ -19,6 +19,14 @@ import engine_flux_klein_4b
 import engine_qwen_edit_2511
 import engine_ernie_image_turbo
 
+# ── Hugging Face ZeroGPU Support ─────────────────────────
+try:
+    import spaces
+    gpu_decorator = spaces.GPU(duration=120)
+except Exception:
+    def gpu_decorator(fn):
+        return fn
+
 # ── Model Manager ─────────────────────────────────────────
 _current_model = None
 
@@ -237,6 +245,7 @@ def generate_auto_mask(image_pil, mask_mode):
 # =====================================================================
 
 # ── GENERATE ───────────────────────────────────────────────
+@gpu_decorator
 def generate_image(model_name, prompt, negative, aspect_ratio,
                    seed, cfg, denoise, num_images, steps):
     seed = make_seed(seed)
@@ -283,6 +292,7 @@ def _select_mask_for_prompt(prompt, image_pil):
     print(f"🎯 Clothing edit → denoise=0.75, prompt: '{prompt}'")
     return clothing_mask, prompt, 0.75
 
+@gpu_decorator
 def do_img2img(model_name, input_image, prompt, negative,
                seed, cfg, denoise, num_images, steps):
     if input_image is None:
@@ -310,6 +320,7 @@ def do_img2img(model_name, input_image, prompt, negative,
     return paths, paths, str(seed)
 
 # ── INPAINT ────────────────────────────────────────────────
+@gpu_decorator
 def do_inpaint(model_name, editor_data, inp_image, prompt, negative,
                seed, cfg, denoise, num_images, mask_mode,
                auto_mask_data, steps):
@@ -729,6 +740,7 @@ with gr.Blocks(**blocks_kwargs) as demo:
             inp_send_btn.click(send_to_editor, [inp_gallery, inp_selected_idx],
                 [inp_editor, inp_mask_mode, inp_editor, inp_image, inp_mask_preview])
 
+            @gpu_decorator
             def do_inpaint_wrapper(model_name, editor_data, inp_image, prompt, negative,
                                    seed, cfg, denoise, num_images, mask_mode,
                                    auto_mask_data, steps):
@@ -781,6 +793,8 @@ else:
 
 is_spaces = "SPACE_ID" in os.environ or os.getenv("SYSTEM") == "spaces"
 launch_kwargs = {"share": not is_spaces, "debug": True}
+if "ssr" in inspect.signature(demo.launch).parameters:
+    launch_kwargs["ssr"] = False
 if is_spaces:
     launch_kwargs["server_name"] = "0.0.0.0"
     launch_kwargs["server_port"] = 7860
