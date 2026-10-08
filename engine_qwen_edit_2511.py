@@ -15,6 +15,33 @@ _clip = None
 _vae_diffusers = None
 _nodes = {}
 
+def _fix_comfy_app_namespace(comfy_dir):
+    comfy_app = os.path.join(comfy_dir, "app")
+    if os.path.exists(comfy_app):
+        import sys, types, importlib.util
+        if "app" in sys.modules:
+            if not hasattr(sys.modules["app"], "__path__"):
+                sys.modules["app"].__path__ = [comfy_app]
+            elif comfy_app not in sys.modules["app"].__path__:
+                sys.modules["app"].__path__.append(comfy_app)
+        else:
+            app_pkg = types.ModuleType("app")
+            app_pkg.__path__ = [comfy_app]
+            sys.modules["app"] = app_pkg
+
+        gov_file = os.path.join(comfy_app, "governance.py")
+        if os.path.exists(gov_file):
+            try:
+                spec = importlib.util.spec_from_file_location("app.governance", gov_file)
+                if spec and spec.loader:
+                    gov_mod = importlib.util.module_from_spec(spec)
+                    sys.modules["app.governance"] = gov_mod
+                    spec.loader.exec_module(gov_mod)
+                    if "app" in sys.modules:
+                        setattr(sys.modules["app"], "governance", gov_mod)
+            except Exception:
+                pass
+
 # ── Node references (ComfyUI + ComfyUI-GGUF) ──────────────
 def _get_nodes():
     global _nodes
@@ -22,8 +49,12 @@ def _get_nodes():
         import sys, os
         comfy_dir = os.environ.get("COMFY_DIR", "/content/ComfyUI")
         for p in [comfy_dir, "/content/ComfyUI", "/kaggle/working/ComfyUI", os.path.abspath("./ComfyUI"), os.path.join(os.path.dirname(__file__), "ComfyUI")]:
-            if os.path.exists(p) and p not in sys.path:
-                sys.path.insert(0, p)
+            if os.path.exists(p):
+                if p not in sys.path:
+                    sys.path.insert(0, p)
+                comfy_dir = p
+                break
+        _fix_comfy_app_namespace(comfy_dir)
         from nodes import NODE_CLASS_MAPPINGS
 
         try:

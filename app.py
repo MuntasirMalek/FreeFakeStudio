@@ -70,6 +70,35 @@ os.environ["COMFY_DIR"] = COMFY_DIR
 if COMFY_DIR not in sys.path:
     sys.path.insert(0, COMFY_DIR)
 
+def _fix_comfy_app_namespace(comfy_dir):
+    comfy_app = os.path.join(comfy_dir, "app")
+    if os.path.exists(comfy_app):
+        import types, importlib.util
+        if "app" in sys.modules:
+            if not hasattr(sys.modules["app"], "__path__"):
+                sys.modules["app"].__path__ = [comfy_app]
+            elif comfy_app not in sys.modules["app"].__path__:
+                sys.modules["app"].__path__.append(comfy_app)
+        else:
+            app_pkg = types.ModuleType("app")
+            app_pkg.__path__ = [comfy_app]
+            sys.modules["app"] = app_pkg
+
+        gov_file = os.path.join(comfy_app, "governance.py")
+        if os.path.exists(gov_file):
+            try:
+                spec = importlib.util.spec_from_file_location("app.governance", gov_file)
+                if spec and spec.loader:
+                    gov_mod = importlib.util.module_from_spec(spec)
+                    sys.modules["app.governance"] = gov_mod
+                    spec.loader.exec_module(gov_mod)
+                    if "app" in sys.modules:
+                        setattr(sys.modules["app"], "governance", gov_mod)
+            except Exception:
+                pass
+
+_fix_comfy_app_namespace(COMFY_DIR)
+
 DIFF   = os.path.join(COMFY_DIR, 'models', 'diffusion_models')
 CLIP   = os.path.join(COMFY_DIR, 'models', 'clip')
 TXTENC = os.path.join(COMFY_DIR, 'models', 'text_encoders')
@@ -259,18 +288,23 @@ def generate_auto_mask(image_pil, mask_mode):
 @gpu_decorator
 def generate_image(model_name, prompt, negative, aspect_ratio,
                    seed, cfg, denoise, num_images, steps):
-    seed = make_seed(seed)
-    w, h = [int(x) for x in aspect_ratio.split("(")[0].strip().split("x")]
-    engine = _ensure_model(model_name)
+    try:
+        seed = make_seed(seed)
+        w, h = [int(x) for x in aspect_ratio.split("(")[0].strip().split("x")]
+        engine = _ensure_model(model_name)
 
-    paths = []
-    for i in range(int(num_images)):
-        img = engine.generate(prompt, negative, w, h,
-                              seed + i, cfg, denoise, int(steps))
-        path = get_save_path("gen")
-        img.save(path)
-        paths.append(path)
-    return paths, paths, str(seed)
+        paths = []
+        for i in range(int(num_images)):
+            img = engine.generate(prompt, negative, w, h,
+                                  seed + i, cfg, denoise, int(steps))
+            path = get_save_path("gen")
+            img.save(path)
+            paths.append(path)
+        return paths, paths, str(seed)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise gr.Error(f"Generation error: {type(e).__name__}: {e}")
 
 # ── IMG2IMG ────────────────────────────────────────────────
 def _select_mask_for_prompt(prompt, image_pil):
@@ -308,67 +342,95 @@ def do_img2img(model_name, input_image, prompt, negative,
                seed, cfg, denoise, num_images, steps):
     if input_image is None:
         raise gr.Error("Upload an image first!")
-    seed = make_seed(seed)
-    engine = _ensure_model(model_name)
+    try:
+        seed = make_seed(seed)
+        engine = _ensure_model(model_name)
 
-    mask = None
-    img_prompt = prompt
-    effective_denoise = denoise
-    if model_name in ("🔮 FLUX.2-klein 9B", "🌊 FLUX.2-klein 4B"):
-        mask, img_prompt, effective_denoise = _select_mask_for_prompt(prompt, input_image)
+        mask = None
+        img_prompt = prompt
+        effective_denoise = denoise
+        if model_name in ("🔮 FLUX.2-klein 9B", "🌊 FLUX.2-klein 4B"):
+            mask, img_prompt, effective_denoise = _select_mask_for_prompt(prompt, input_image)
 
-    paths = []
-    for i in range(int(num_images)):
-        if mask is not None:
-            img = engine.img2img(input_image, img_prompt, negative,
-                                 seed + i, cfg, effective_denoise, int(steps), mask=mask)
-        else:
-            img = engine.img2img(input_image, img_prompt, negative,
-                                 seed + i, cfg, denoise, int(steps))
-        path = get_save_path("i2i")
-        img.save(path)
-        paths.append(path)
-    return paths, paths, str(seed)
+        paths = []
+        for i in range(int(num_images)):
+            if mask is not None:
+                img = engine.img2img(input_image, img_prompt, negative,
+                                     seed + i, cfg, effective_denoise, int(steps), mask=mask)
+            else:
+                img = engine.img2img(input_image, img_prompt, negative,
+                                     seed + i, cfg, denoise, int(steps))
+            path = get_save_path("i2i")
+            img.save(path)
+            paths.append(path)
+        return paths, paths, str(seed)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise gr.Error(f"Img2Img error: {type(e).__name__}: {e}")
 
 # ── INPAINT ────────────────────────────────────────────────
 @gpu_decorator
 def do_inpaint(model_name, editor_data, inp_image, prompt, negative,
                seed, cfg, denoise, num_images, mask_mode,
                auto_mask_data, steps):
-    seed = make_seed(seed)
-    engine = _ensure_model(model_name)
+    try:
+        seed = make_seed(seed)
+        engine = _ensure_model(model_name)
 
-    # Determine image and mask
-    if mask_mode == "🖌️ Manual Paint":
-        if editor_data is None:
-            raise gr.Error("Upload and paint on an image first!")
-        if isinstance(editor_data, dict):
-            bg = editor_data.get("background")
-            layers = editor_data.get("layers", [])
-        else:
-            raise gr.Error("Unexpected input format.")
-        if bg is None:
-            raise gr.Error("No background image found.")
-        if not isinstance(bg, Image.Image):
-            bg = Image.fromarray(bg)
+        # Determine image and mask
+        if mask_mode == "🖌️ Manual Paint":
+            if editor_data is None:
+                raise gr.Error("Upload and paint on an image first!")
+            if isinstance(editor_data, dict):
+                bg = editor_data.get("background")
+                layers = editor_data.get("layers", [])
+            else:
+                raise gr.Error("Unexpected input format.")
+            if bg is None:
+                raise gr.Error("No background image found.")
+            if not isinstance(bg, Image.Image):
+                bg = Image.fromarray(bg)
 
-        manual_mask = np.zeros((bg.size[1], bg.size[0]), dtype=np.uint8)
-        for layer in layers:
-            if not isinstance(layer, Image.Image):
-                layer = Image.fromarray(layer)
-            layer = layer.resize(bg.size)
-            arr = np.array(layer)
-            if arr.ndim == 3 and arr.shape[2] == 4:
-                manual_mask = np.maximum(manual_mask, arr[:, :, 3])
-            elif arr.ndim == 3:
-                manual_mask = np.maximum(manual_mask, np.mean(arr[:, :, :3], axis=2).astype(np.uint8))
-            elif arr.ndim == 2:
-                manual_mask = np.maximum(manual_mask, arr)
+            manual_mask = np.zeros((bg.size[1], bg.size[0]), dtype=np.uint8)
+            for layer in layers:
+                if not isinstance(layer, Image.Image):
+                    layer = Image.fromarray(layer)
+                layer = layer.resize(bg.size)
+                arr = np.array(layer)
+                if arr.ndim == 3 and arr.shape[2] == 4:
+                    manual_mask = np.maximum(manual_mask, arr[:, :, 3])
+                elif arr.ndim == 3:
+                    manual_mask = np.maximum(manual_mask, np.mean(arr[:, :, :3], axis=2).astype(np.uint8))
+                elif arr.ndim == 2:
+                    manual_mask = np.maximum(manual_mask, arr)
 
-        has_manual_paint = np.sum(manual_mask > 0) > 0
+            has_manual_paint = np.sum(manual_mask > 0) > 0
 
-        if has_manual_paint:
-            if auto_mask_data and auto_mask_data.get("original") is not None:
+            if has_manual_paint:
+                if auto_mask_data and auto_mask_data.get("original") is not None:
+                    orig_data = auto_mask_data["original"]
+                    if isinstance(orig_data, str):
+                        original = Image.open(orig_data).convert("RGB")
+                    elif isinstance(orig_data, np.ndarray):
+                        original = Image.fromarray(orig_data).convert("RGB")
+                    elif isinstance(orig_data, Image.Image):
+                        original = orig_data.convert("RGB")
+                    else:
+                        original = bg.convert("RGB")
+                    stored_mask = auto_mask_data.get("mask")
+                    if stored_mask is not None:
+                        stored_mask = np.array(stored_mask, dtype=np.uint8)
+                        if stored_mask.shape[:2] != manual_mask.shape[:2]:
+                            stored_mask = np.array(Image.fromarray(stored_mask).resize(
+                                (manual_mask.shape[1], manual_mask.shape[0]), Image.NEAREST))
+                        mask_combined = np.maximum(stored_mask, manual_mask)
+                    else:
+                        mask_combined = manual_mask
+                else:
+                    original = bg.convert("RGB")
+                    mask_combined = manual_mask
+            elif auto_mask_data and auto_mask_data.get("mask") is not None:
                 orig_data = auto_mask_data["original"]
                 if isinstance(orig_data, str):
                     original = Image.open(orig_data).convert("RGB")
@@ -377,56 +439,38 @@ def do_inpaint(model_name, editor_data, inp_image, prompt, negative,
                 elif isinstance(orig_data, Image.Image):
                     original = orig_data.convert("RGB")
                 else:
-                    original = bg.convert("RGB")
-                stored_mask = auto_mask_data.get("mask")
-                if stored_mask is not None:
-                    stored_mask = np.array(stored_mask, dtype=np.uint8)
-                    if stored_mask.shape[:2] != manual_mask.shape[:2]:
-                        stored_mask = np.array(Image.fromarray(stored_mask).resize(
-                            (manual_mask.shape[1], manual_mask.shape[0]), Image.NEAREST))
-                    mask_combined = np.maximum(stored_mask, manual_mask)
-                else:
-                    mask_combined = manual_mask
+                    raise gr.Error("Could not load original image.")
+                mask_data = auto_mask_data["mask"]
+                mask_combined = np.array(mask_data, dtype=np.uint8)
+                if mask_combined.shape[:2] != (original.size[1], original.size[0]):
+                    mask_combined = np.array(Image.fromarray(mask_combined).resize(original.size, Image.NEAREST))
             else:
-                original = bg.convert("RGB")
-                mask_combined = manual_mask
-        elif auto_mask_data and auto_mask_data.get("mask") is not None:
-            orig_data = auto_mask_data["original"]
-            if isinstance(orig_data, str):
-                original = Image.open(orig_data).convert("RGB")
-            elif isinstance(orig_data, np.ndarray):
-                original = Image.fromarray(orig_data).convert("RGB")
-            elif isinstance(orig_data, Image.Image):
-                original = orig_data.convert("RGB")
+                raise gr.Error("Paint the areas you want to change, or use auto-mask first!")
+        else:
+            if inp_image is None:
+                raise gr.Error("Upload an image first!")
+            if not isinstance(inp_image, Image.Image):
+                inp_image = Image.fromarray(inp_image)
+            original = inp_image.convert("RGB")
+            if mask_mode == "🏞️ Background Only":
+                mask_combined = auto_mask_background(original)
+            elif mask_mode == "🎭 Everything Except Face":
+                mask_combined = auto_mask_except_face(original)
             else:
-                raise gr.Error("Could not load original image.")
-            mask_data = auto_mask_data["mask"]
-            mask_combined = np.array(mask_data, dtype=np.uint8)
-            if mask_combined.shape[:2] != (original.size[1], original.size[0]):
-                mask_combined = np.array(Image.fromarray(mask_combined).resize(original.size, Image.NEAREST))
-        else:
-            raise gr.Error("Paint the areas you want to change, or use auto-mask first!")
-    else:
-        if inp_image is None:
-            raise gr.Error("Upload an image first!")
-        if not isinstance(inp_image, Image.Image):
-            inp_image = Image.fromarray(inp_image)
-        original = inp_image.convert("RGB")
-        if mask_mode == "🏞️ Background Only":
-            mask_combined = auto_mask_background(original)
-        elif mask_mode == "🎭 Everything Except Face":
-            mask_combined = auto_mask_except_face(original)
-        else:
-            raise gr.Error("Unknown mask mode.")
+                raise gr.Error("Unknown mask mode.")
 
-    paths = []
-    for i in range(int(num_images)):
-        img = engine.inpaint(original, mask_combined, prompt, negative,
-                             seed + i, cfg, denoise, int(steps))
-        path = get_save_path("inpaint")
-        img.save(path)
-        paths.append(path)
-    return paths, paths, str(seed)
+        paths = []
+        for i in range(int(num_images)):
+            img = engine.inpaint(original, mask_combined, prompt, negative,
+                                 seed + i, cfg, denoise, int(steps))
+            path = get_save_path("inpaint")
+            img.save(path)
+            paths.append(path)
+        return paths, paths, str(seed)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise gr.Error(f"Inpaint error: {type(e).__name__}: {e}")
 
 
 # =====================================================================
