@@ -5,6 +5,7 @@
 # ============================================================
 
 import os, random, time, sys, gc
+os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
 import torch
 import numpy as np
 from PIL import Image
@@ -99,6 +100,15 @@ def _fix_comfy_app_namespace(comfy_dir):
 
 _fix_comfy_app_namespace(COMFY_DIR)
 
+# Runtime verification of ComfyUI required dependencies
+for _pkg in ["comfy-aimdo", "comfy-kitchen", "comfy-angle", "simpleeval", "blake3"]:
+    try:
+        __import__(_pkg.replace("-", "_"))
+    except ImportError:
+        import subprocess
+        print(f"⏳ Installing missing ComfyUI dependency: {_pkg}...")
+        subprocess.run([sys.executable, "-m", "pip", "install", "-q", _pkg], check=False)
+
 DIFF   = os.path.join(COMFY_DIR, 'models', 'diffusion_models')
 CLIP   = os.path.join(COMFY_DIR, 'models', 'clip')
 TXTENC = os.path.join(COMFY_DIR, 'models', 'text_encoders')
@@ -168,16 +178,42 @@ def ensure_model_files(model_name):
             print(f"⏳ Downloading missing model file {name}...")
             if hasattr(gr, "Info"):
                 try:
-                    gr.Info(f"Downloading {model_name} in background (~1-2 min)...")
+                    gr.Info(f"Downloading {name} (~1-2 min)...")
                 except:
                     pass
-            import subprocess
             dl_ok = False
-            try:
-                subprocess.run(["aria2c", "--console-log-level=error", "-c", "-x", "16", "-s", "16", "-k", "1M", url, "-d", dest_dir, "-o", name], check=True)
-                dl_ok = True
-            except Exception:
-                pass
+            import re
+            m = re.match(r'https://huggingface\.co/([^/]+/[^/]+)/resolve/([^/]+)/(.+)', url)
+            if m:
+                repo_id, revision, subpath = m.groups()
+                try:
+                    from huggingface_hub import hf_hub_download
+                    import shutil
+                    token = os.environ.get("HF_TOKEN")
+                    print(f"🚀 Downloading {name} via huggingface_hub from {repo_id}...")
+                    cached = hf_hub_download(repo_id=repo_id, filename=subpath, revision=revision, token=token)
+                    if os.path.exists(path):
+                        try:
+                            os.remove(path)
+                        except Exception:
+                            pass
+                    try:
+                        os.symlink(cached, path)
+                    except Exception:
+                        shutil.copy2(cached, path)
+                    if os.path.exists(path) and os.path.getsize(path) > 1024:
+                        dl_ok = True
+                        print(f"✅ Fast-downloaded {name} via HF Hub")
+                except Exception as e:
+                    print(f"⚠️ hf_hub_download notice for {name}: {e}")
+
+            if not dl_ok:
+                import subprocess
+                try:
+                    subprocess.run(["aria2c", "--console-log-level=error", "-c", "-x", "16", "-s", "16", "-k", "1M", url, "-d", dest_dir, "-o", name], check=True)
+                    dl_ok = True
+                except Exception:
+                    pass
             if not dl_ok or not os.path.exists(path) or os.path.getsize(path) <= 1024:
                 import urllib.request
                 print(f"⬇️ Downloading via HTTP fallback: {name}...")
